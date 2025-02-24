@@ -1,0 +1,2 @@
+C:\FULL\output\releases\exe\ProgramaFull.pdb
+C:\FULL\output\releases\exe\ProgramaFull.exe

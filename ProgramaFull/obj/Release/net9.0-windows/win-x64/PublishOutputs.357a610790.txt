@@ -1,0 +1,6 @@
+C:\FULL\output\releases\ProgramaFull.pdb
+C:\FULL\output\releases\D3DCompiler_47_cor3.dll
+C:\FULL\output\releases\PenImc_cor3.dll
+C:\FULL\output\releases\vcruntime140_cor3.dll
+C:\FULL\output\releases\wpfgfx_cor3.dll
+C:\FULL\output\releases\ProgramaFull.exe
