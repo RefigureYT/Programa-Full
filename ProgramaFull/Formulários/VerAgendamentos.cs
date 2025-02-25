@@ -13,35 +13,35 @@
 
     namespace ProgramaFull.Formulários
     {
-        public partial class VerAgendamentos : Form
+    public partial class VerAgendamentos : Form
+    {
+        public VerAgendamentos()
         {
-            public VerAgendamentos()
-            {
-                InitializeComponent();
-            }
+            InitializeComponent();
+        }
 
-            private void comboBoxFiltro_SelectedIndexChanged(object sender, EventArgs e)
-            {
-                string filtroSelecionado = comboBoxFiltro.SelectedItem.ToString();
-                string diretorio = @"P:\INFORMATICA\programas\FULL\KelvinV2\agendamentos";
+        private void comboBoxFiltro_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            string filtroSelecionado = comboBoxFiltro.SelectedItem.ToString();
+            string diretorio = @"P:\INFORMATICA\programas\FULL\KelvinV2\agendamentos";
 
-                LoadPastas(diretorio, filtroSelecionado);
-            }
+            LoadPastas(diretorio, filtroSelecionado);
+        }
 
-            private void VerAgendamentos_Load(object sender, EventArgs e)
-            {
-                comboBoxFiltro.Items.Add("Todos");
-                comboBoxFiltro.Items.Add("Pré Conferência");
-                comboBoxFiltro.Items.Add("Embalar");
-                comboBoxFiltro.Items.Add("Etiquetagem");
-                comboBoxFiltro.Items.Add("Expedição");
+        private void VerAgendamentos_Load(object sender, EventArgs e)
+        {
+            comboBoxFiltro.Items.Add("Todos");
+            comboBoxFiltro.Items.Add("Pré Conferência");
+            comboBoxFiltro.Items.Add("Embalar");
+            comboBoxFiltro.Items.Add("Etiquetagem");
+            comboBoxFiltro.Items.Add("Expedição");
 
-                comboBoxFiltro.SelectedIndex = 0;
-                comboBoxFiltro.SelectedIndexChanged += comboBoxFiltro_SelectedIndexChanged;
+            comboBoxFiltro.SelectedIndex = 0;
+            comboBoxFiltro.SelectedIndexChanged += comboBoxFiltro_SelectedIndexChanged;
 
-                string diretorio = @"P:\INFORMATICA\programas\FULL\KelvinV2\agendamentos";
-                LoadPastas(diretorio);
-            }
+            string diretorio = @"P:\INFORMATICA\programas\FULL\KelvinV2\agendamentos";
+            LoadPastas(diretorio);
+        }
 
 
         public void LoadPastas(string diretorio, string filtro = "Todos")
@@ -118,7 +118,7 @@
                             }
                         }
                         catch (Exception)
-                        {
+                        {   
                             statusStatus = "Pré Conferência";
                             statusEmpresa = "Indefinido";
                         }
@@ -275,95 +275,95 @@
         }
 
         private void buttonComecar_click(object sender, EventArgs e, string nomePasta, string statusStatus)
+        {
+            // Verifica se o nomePasta pode ser convertido para um número válido
+            if (int.TryParse(nomePasta, out int numeroAgendamento))
             {
-                // Verifica se o nomePasta pode ser convertido para um número válido
-                if (int.TryParse(nomePasta, out int numeroAgendamento))
-                {
-                    // Armazena o número do agendamento e o status atual no programa
-                    Program.nomePasta = numeroAgendamento;
-                    Program.statusAtual = statusStatus;
+                // Armazena o número do agendamento e o status atual no programa
+                Program.nomePasta = numeroAgendamento;
+                Program.statusAtual = statusStatus;
 
-                    Button clickedButton = sender as Button; // Identifica o botão que foi clicado
-                    if (clickedButton != null && clickedButton.Text == "Começar")
+                Button clickedButton = sender as Button; // Identifica o botão que foi clicado
+                if (clickedButton != null && clickedButton.Text == "Começar")
+                {
+                    if (statusStatus == "Pré Conferência")
                     {
-                        if (statusStatus == "Pré Conferência")
+                        // Abre a janela para pedir o nome da empresa
+                        pedirEmpresa janelaEmpresa = new pedirEmpresa();
+                        janelaEmpresa.Show();
+                        this.Close(); // Fecha a janela atual
+                    }
+                    else if (statusStatus == "Embalar")
+                    {
+                        // Abre a janela para solicitar o nome do colaborador
+                        pedirColaborador janelaColaborador = new pedirColaborador();
+                        if (janelaColaborador.ShowDialog() == DialogResult.OK)
                         {
-                            // Abre a janela para pedir o nome da empresa
-                            pedirEmpresa janelaEmpresa = new pedirEmpresa();
-                            janelaEmpresa.Show();
-                            this.Close(); // Fecha a janela atual
-                        }
-                        else if (statusStatus == "Embalar")
-                        {
-                            // Abre a janela para solicitar o nome do colaborador
-                            pedirColaborador janelaColaborador = new pedirColaborador();
-                            if (janelaColaborador.ShowDialog() == DialogResult.OK)
-                            {
-                                string colaborador = Program.nomeColaborador; // Nome do colaborador inserido
-                                AtualizarInfoJsonParaEmbalar(nomePasta, colaborador); // Atualiza o arquivo JSON somente após o colaborador ser definido
-                                AbrirFormularioEtiquetagem(); // Abre o formulário para etiquetagem
-                            }
-                        }
-                        else
-                        {
-                            // Atualiza o JSON para a próxima etapa apenas após todas as informações estarem disponíveis
-                            // Este fluxo pode ser ajustado dependendo da necessidade do programa
+                            string colaborador = Program.nomeColaborador; // Nome do colaborador inserido
+                            AtualizarInfoJsonParaEmbalar(nomePasta, colaborador); // Atualiza o arquivo JSON somente após o colaborador ser definido
+                            AbrirFormularioEtiquetagem(); // Abre o formulário para etiquetagem
                         }
                     }
                     else
                     {
-                        // Caso o botão não seja "Começar", solicita apenas o nome do colaborador
-                        pedirColaborador janelaColaborador = new pedirColaborador();
-                        Program.confirmarEmpresa = false; // Define que não será necessário confirmar a empresa
-                        janelaColaborador.Show();
-                        this.Close();
+                        // Atualiza o JSON para a próxima etapa apenas após todas as informações estarem disponíveis
+                        // Este fluxo pode ser ajustado dependendo da necessidade do programa
                     }
                 }
                 else
                 {
-                    // Exibe mensagem de erro caso o nomePasta não seja um número válido
-                    MessageBox.Show("O número do agendamento precisa ser um número válido.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    // Caso o botão não seja "Começar", solicita apenas o nome do colaborador
+                    pedirColaborador janelaColaborador = new pedirColaborador();
+                    Program.confirmarEmpresa = false; // Define que não será necessário confirmar a empresa
+                    janelaColaborador.Show();
+                    this.Close();
+                }
+            }
+            else
+            {
+                // Exibe mensagem de erro caso o nomePasta não seja um número válido
+                MessageBox.Show("O número do agendamento precisa ser um número válido.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+
+        private void AtualizarInfoJsonParaEmbalar(string nomePasta, string colaborador)
+        {
+            // Define o caminho para o arquivo JSON
+            string caminhoJson = Path.Combine("P:\\INFORMATICA\\programas\\FULL\\KelvinV2\\agendamentos", nomePasta, "info.json");
+
+            if (!File.Exists(caminhoJson))
+            {
+                // Exibe mensagem de erro caso o arquivo JSON não seja encontrado
+                MessageBox.Show("Arquivo info.json não encontrado.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            string jsonContent = File.ReadAllText(caminhoJson); // Lê o conteúdo do arquivo JSON
+            var options = new JsonSerializerOptions { WriteIndented = true }; // Define opções para formatação do JSON
+            var dados = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonContent); // Deserializa o JSON para um dicionário
+
+            if (dados == null)
+            {
+                // Exibe mensagem de erro caso o JSON não seja válido
+                MessageBox.Show("Erro ao ler o conteúdo do arquivo JSON.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            string empresa = ""; // Inicializa a variável para armazenar o nome da empresa
+            if (dados.ContainsKey("Pré Conferência"))
+            {
+                // Tenta extrair o nome da empresa do JSON da etapa "Pré Conferência"
+                var preConferencia = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(dados["Pré Conferência"].ToString());
+                if (preConferencia != null && preConferencia.Count > 0 && preConferencia[0].ContainsKey("Empresa"))
+                {
+                    empresa = preConferencia[0]["Empresa"].ToString();
                 }
             }
 
-
-            private void AtualizarInfoJsonParaEmbalar(string nomePasta, string colaborador)
-            {
-                // Define o caminho para o arquivo JSON
-                string caminhoJson = Path.Combine("P:\\INFORMATICA\\programas\\FULL\\KelvinV2\\agendamentos", nomePasta, "info.json");
-
-                if (!File.Exists(caminhoJson))
-                {
-                    // Exibe mensagem de erro caso o arquivo JSON não seja encontrado
-                    MessageBox.Show("Arquivo info.json não encontrado.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-
-                string jsonContent = File.ReadAllText(caminhoJson); // Lê o conteúdo do arquivo JSON
-                var options = new JsonSerializerOptions { WriteIndented = true }; // Define opções para formatação do JSON
-                var dados = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonContent); // Deserializa o JSON para um dicionário
-
-                if (dados == null)
-                {
-                    // Exibe mensagem de erro caso o JSON não seja válido
-                    MessageBox.Show("Erro ao ler o conteúdo do arquivo JSON.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-
-                string empresa = ""; // Inicializa a variável para armazenar o nome da empresa
-                if (dados.ContainsKey("Pré Conferência"))
-                {
-                    // Tenta extrair o nome da empresa do JSON da etapa "Pré Conferência"
-                    var preConferencia = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(dados["Pré Conferência"].ToString());
-                    if (preConferencia != null && preConferencia.Count > 0 && preConferencia[0].ContainsKey("Empresa"))
-                    {
-                        empresa = preConferencia[0]["Empresa"].ToString();
-                    }
-                }
-
-                // Cria uma nova entrada para a etapa "Embalar"
-                var embalarArray = new List<Dictionary<string, object>>();
-                var novoItem = new Dictionary<string, object>
+            // Cria uma nova entrada para a etapa "Embalar"
+            var embalarArray = new List<Dictionary<string, object>>();
+            var novoItem = new Dictionary<string, object>
                 {
                     { "Status", "Embalar" },
                     { "Empresa", empresa },
@@ -371,85 +371,97 @@
                     { "Colaborador", colaborador }
                 };
 
-                embalarArray.Add(novoItem);
-                dados["Embalar"] = embalarArray; // Adiciona a nova entrada ao dicionário principal
+            embalarArray.Add(novoItem);
+            dados["Embalar"] = embalarArray; // Adiciona a nova entrada ao dicionário principal
 
-                string novoJson = JsonSerializer.Serialize(dados, options); // Serializa o dicionário atualizado
-                File.WriteAllText(caminhoJson, novoJson); // Escreve o conteúdo atualizado no arquivo
+            string novoJson = JsonSerializer.Serialize(dados, options); // Serializa o dicionário atualizado
+            File.WriteAllText(caminhoJson, novoJson); // Escreve o conteúdo atualizado no arquivo
 
-                // Exibe mensagem de sucesso
-                MessageBox.Show("Arquivo JSON atualizado com sucesso.", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
+            // Exibe mensagem de sucesso
+            MessageBox.Show("Arquivo JSON atualizado com sucesso.", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
 
-            private void AbrirFormularioEtiquetagem()
+        private void AbrirFormularioEtiquetagem()
+        {
+            // Abre o formulário para etiquetagem
+            EmbalarEtiquetagemBIPE etiquetagemForm = new EmbalarEtiquetagemBIPE();
+            etiquetagemForm.Show();
+        }
+
+        private void buttonVer_Click(object sender, EventArgs e, string nomePasta, string statusStatus)
+        {
+            try
             {
-                // Abre o formulário para etiquetagem
-                EmbalarEtiquetagemBIPE etiquetagemForm = new EmbalarEtiquetagemBIPE();
-                etiquetagemForm.Show();
-            }
- 
-            private void buttonVer_Click(object sender, EventArgs e, string nomePasta, string statusStatus)
+                // Obtém o caminho do arquivo baseado no status
+                string caminhoArquivo = Program.ObterCaminhoArquivo(nomePasta, statusStatus);
+
+                // Log para depuração
+                MessageBox.Show($"Tentando acessar o arquivo: {caminhoArquivo}");
+
+                if (!File.Exists(caminhoArquivo))
                 {
-                    try
-                    {
-                        // Obtém o caminho do arquivo baseado no status
-                        string caminhoArquivo = Program.ObterCaminhoArquivo(nomePasta, statusStatus);
-
-                        // Log para depuração
-                        MessageBox.Show($"Tentando acessar o arquivo: {caminhoArquivo}");
-
-                        if (!File.Exists(caminhoArquivo))
-                        {
-                            MessageBox.Show($"O arquivo {Path.GetFileName(caminhoArquivo)} não foi encontrado.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            return;
-                        }
-
-                        // Lê o conteúdo do JSON
-                        string jsonContent = File.ReadAllText(caminhoArquivo);
-
-                        // Abre a janela json2tabela e passa os dados do JSON
-                        json2tabela janelaTabela = new json2tabela();
-                        janelaTabela.CarregarDados(jsonContent); // Método para carregar os dados
-                        janelaTabela.Show();
-                        Close();
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Erro ao processar o arquivo: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
+                    MessageBox.Show($"O arquivo {Path.GetFileName(caminhoArquivo)} não foi encontrado.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
                 }
 
-            private void btnVoltar_Click(object sender, EventArgs e)
-            {
-                this.Close();
-                Menu menu = new Menu();
-                menu.Show();
+                // Lê o conteúdo do JSON
+                string jsonContent = File.ReadAllText(caminhoArquivo);
 
+                // Abre a janela json2tabela e passa os dados do JSON
+                json2tabela janelaTabela = new json2tabela();
+                janelaTabela.CarregarDados(jsonContent); // Método para carregar os dados
+                janelaTabela.Show();
+                Close();
             }
-
-            private void pictureBox1_Click(object sender, EventArgs e)
+            catch (Exception ex)
             {
-
-            }
-
-            private void groupBox1_Enter(object sender, EventArgs e)
-            {
-
-            }
-
-            private void buttonVer_Click(object sender, EventArgs e)
-            {
-
-            }
-
-            private void labStatus_Click(object sender, EventArgs e)
-            {
-
-            }
-
-            private void painelAgendamentos_Paint(object sender, PaintEventArgs e)
-            {
-
+                MessageBox.Show($"Erro ao processar o arquivo: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        private void btnVoltar_Click(object sender, EventArgs e)
+        {
+            this.Close();
+            Menu menu = new Menu();
+            menu.Show();
+
+        }
+
+        private void pictureBox1_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void groupBox1_Enter(object sender, EventArgs e)
+        {
+
+        }
+
+        private void buttonVer_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void labStatus_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void painelAgendamentos_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void refreshButton_Click(object sender, EventArgs e)
+        {
+            string diretorio = @"P:\INFORMATICA\programas\FULL\KelvinV2\agendamentos";
+
+            // Obtém o filtro atual do comboBox
+            string filtroSelecionado = comboBoxFiltro.SelectedItem.ToString();
+
+            // Chama LoadPastas() novamente com o filtro atual
+            LoadPastas(diretorio, filtroSelecionado);
+
+        }
     }
+}

@@ -48,6 +48,7 @@
             panel7 = new Panel();
             panel8 = new Panel();
             comboBoxFiltro = new ComboBox();
+            refreshButton = new Button();
             caixaAg.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             painelAgendamentos.SuspendLayout();
@@ -251,11 +252,26 @@
             comboBoxFiltro.Size = new Size(121, 23);
             comboBoxFiltro.TabIndex = 9;
             // 
+            // refreshButton
+            // 
+            refreshButton.Anchor = AnchorStyles.Left;
+            refreshButton.AutoSize = true;
+            refreshButton.BackgroundImage = Properties.Resources.Refresh1;
+            refreshButton.BackgroundImageLayout = ImageLayout.Zoom;
+            refreshButton.Location = new Point(222, 421);
+            refreshButton.Name = "refreshButton";
+            refreshButton.Size = new Size(23, 23);
+            refreshButton.TabIndex = 10;
+            refreshButton.TabStop = false;
+            refreshButton.UseVisualStyleBackColor = true;
+            refreshButton.Click += refreshButton_Click;
+            // 
             // VerAgendamentos
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(903, 459);
+            Controls.Add(refreshButton);
             Controls.Add(comboBoxFiltro);
             Controls.Add(panel8);
             Controls.Add(panel7);
@@ -277,6 +293,7 @@
             ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
             painelAgendamentos.ResumeLayout(false);
             ResumeLayout(false);
+            PerformLayout();
         }
 
         #endregion
@@ -301,5 +318,6 @@
         private Panel panel6;
         private Panel panel8;
         private ComboBox comboBoxFiltro;
+        private Button refreshButton;
     }
 }
