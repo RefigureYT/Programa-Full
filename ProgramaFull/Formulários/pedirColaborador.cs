@@ -49,10 +49,28 @@ namespace ProgramaFull.Formulários
             {
                 Program.nomeColaborador = caixaTexto.Text;
 
-                // Atualiza as informações e abre a próxima janela diretamente
-                Program.AtualizarInfoJson();
-                preConfForm janelaPreConferencia = new preConfForm();
-                janelaPreConferencia.Show();
+                // Atualiza as informações do JSON
+                Program.AtualizarInfoJson(Program.nomePasta.ToString(), Program.statusAtual, Program.nomeColaborador);
+
+                // Define o próximo formulário dinamicamente com base no status
+                Dictionary<string, Func<Form>> formulariosPorStatus = new Dictionary<string, Func<Form>>
+                {
+                    { "Pré Conferência", () => new preConfForm() },
+                    { "Embalar", () => new EmbalarEtiquetagemBIPE() },
+                    //{ "Encaixotar", () => new EncaixotarForm() },
+                    //{ "Expedição", () => new ExpedicaoForm() }
+                };
+
+                if (formulariosPorStatus.TryGetValue(Program.statusAtual, out Func<Form> formFactory))
+                {
+                    Form proximoFormulario = formFactory();
+                    proximoFormulario.Show();
+                }
+                else
+                {
+                    MessageBox.Show($"Nenhum formulário encontrado para a etapa: {Program.statusAtual}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+
                 Close();
             }
             else
@@ -60,6 +78,7 @@ namespace ProgramaFull.Formulários
                 MessageBox.Show("Você não pode enviar um valor vazio, coloque o nome do colaborador.", "ERRO", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
 
         private void caixaTexto_KeyDown(object sender, KeyEventArgs e)
         {

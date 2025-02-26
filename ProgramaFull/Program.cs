@@ -133,87 +133,60 @@ namespace ProgramaFull
             return caminhoArquivo;
         }
 
-        public static void AtualizarInfoJson()
+        public static void AtualizarInfoJson(string nomePasta, string etapaAtual, string colaborador)
         {
-            // Caminho do arquivo
-            string diretorio = $@"P:\INFORMATICA\programas\FULL\KelvinV2\agendamentos\{nomePasta}\";
-            string caminhoArquivo = Path.Combine(diretorio, "info.json");
+            string caminhoJson = Path.Combine("P:\\INFORMATICA\\programas\\FULL\\KelvinV2\\agendamentos", nomePasta, "info.json");
 
-            // Normaliza a chave de status para evitar inconsistências
-            string chaveStatus = statusAtual.Replace("_", " ");
-
-            // Objeto base a ser adicionado
-            var novaEntrada = new Dictionary<string, object>
-    {
-        { "Status", statusAtual },
-        { "Empresa", nomeEmpresa },
-        { "Concluído", false },
-        { "Colaborador", nomeColaborador }
-    };
-
-            try
+            if (!File.Exists(caminhoJson))
             {
-                // Dicionário que representará o JSON
-                Dictionary<string, List<Dictionary<string, object>>> jsonData;
-
-                if (File.Exists(caminhoArquivo))
-                {
-                    // Lê o conteúdo do JSON existente
-                    string conteudoAtual = File.ReadAllText(caminhoArquivo);
-                    jsonData = JsonSerializer.Deserialize<Dictionary<string, List<Dictionary<string, object>>>>(conteudoAtual);
-
-                    // Verifica se a chave existe no JSON
-                    if (jsonData.ContainsKey(chaveStatus))
-                    {
-                        // Atualiza ou adiciona a entrada na lista correspondente
-                        var lista = jsonData[chaveStatus];
-
-                        // Verifica se já existe uma entrada com o colaborador atual
-                        var existente = lista.FirstOrDefault(item =>
-                            item.ContainsKey("Colaborador") &&
-                            item["Colaborador"].ToString() == nomeColaborador);
-
-                        if (existente == null)
-                        {
-                            // Adiciona uma nova entrada à lista se o colaborador não existe
-                            lista.Add(novaEntrada);
-                        }
-
-                        // Atualiza a variável `nomeEmpresa` com o valor da primeira ocorrência da empresa
-                        var primeiraEmpresa = lista.FirstOrDefault(item => item.ContainsKey("Empresa"));
-                        if (primeiraEmpresa != null && primeiraEmpresa.ContainsKey("Empresa"))
-                        {
-                            nomeEmpresa = primeiraEmpresa["Empresa"].ToString();
-                        }
-                    }
-                    else
-                    {
-                        // Adiciona uma nova chave com a entrada
-                        jsonData[chaveStatus] = new List<Dictionary<string, object>> { novaEntrada };
-                    }
-                }
-                else
-                {
-                    // Cria um novo JSON se o arquivo não existir
-                    jsonData = new Dictionary<string, List<Dictionary<string, object>>>
-            {
-                { chaveStatus, new List<Dictionary<string, object>> { novaEntrada } }
-            };
-
-                    // Atualiza `nomeEmpresa` com o valor inicial
-                    nomeEmpresa = novaEntrada["Empresa"].ToString();
-                }
-
-                // Salva o arquivo JSON atualizado
-                string jsonAtualizado = JsonSerializer.Serialize(jsonData, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(caminhoArquivo, jsonAtualizado);
-
-                //MessageBox.Show("Arquivo info.json atualizado com sucesso!", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Arquivo info.json não encontrado.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
             }
-            catch (Exception ex)
+
+            string jsonContent = File.ReadAllText(caminhoJson);
+            var options = new JsonSerializerOptions { WriteIndented = true };
+
+            // Corrigido: Agora forçamos `dados` a ser um `Dictionary`
+            Dictionary<string, List<Dictionary<string, object>>> dados =
+                JsonSerializer.Deserialize<Dictionary<string, List<Dictionary<string, object>>>>(jsonContent) ?? new Dictionary<string, List<Dictionary<string, object>>>();
+
+            // Obtém a empresa a partir da etapa "Pré Conferência" (se disponível)
+            string empresa = "Indefinido";
+            if (dados.ContainsKey("Pré Conferência") && dados["Pré Conferência"].Count > 0)
             {
-                MessageBox.Show($"Erro ao atualizar o arquivo JSON: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                if (dados["Pré Conferência"][0].ContainsKey("Empresa"))
+                {
+                    empresa = dados["Pré Conferência"][0]["Empresa"].ToString();
+                }
             }
+
+            // Se a etapa não existir ainda, cria um novo array vazio
+            if (!dados.ContainsKey(etapaAtual))
+            {
+                dados[etapaAtual] = new List<Dictionary<string, object>>();
+            }
+
+            // Verifica se a entrada já existe para evitar duplicação
+            bool entradaJaExiste = dados[etapaAtual].Any(entry =>
+                entry.ContainsKey("Colaborador") && entry["Colaborador"].ToString() == colaborador &&
+                entry.ContainsKey("Empresa") && entry["Empresa"].ToString() == empresa
+            );
+
+            if (!entradaJaExiste)
+            {
+                dados[etapaAtual].Add(new Dictionary<string, object>
+                {
+                    { "Status", etapaAtual },
+                    { "Empresa", empresa },
+                    { "Concluído", false },
+                    { "Colaborador", colaborador }
+                });
+            }
+
+            // Serializa e grava o JSON atualizado
+            string novoJson = JsonSerializer.Serialize(dados, options);
+            File.WriteAllText(caminhoJson, novoJson);
         }
+
     }
 }
