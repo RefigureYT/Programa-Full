@@ -318,7 +318,21 @@ namespace ProgramaFull.Formulários
                     {
                         if(!File.Exists(caminhoEmbalarJson))
                         {
-                            MessageBox.Show($"O arquivo {numeroAgendamento}_Embalar.json não foi encontrado. Não é possível continuar.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            DialogResult resultado = MessageBox.Show($"O arquivo {numeroAgendamento}_Embalar.json não foi encontrado. Não é possível continuar." +
+                                "\n\nSolução sugerida: Envie o PDF em \"Embalar\" no Google Drive. Se você já enviou aguarde até que o processo seja finalizado." +
+                                "\n\nVocê gostaria de ser redirecionado para o Drive?" +
+                                "\n\n*CASO NÃO FUNCIONE CONTATE O ADMINISTRADOR*", "Erro", MessageBoxButtons.YesNo, MessageBoxIcon.Error
+                            );
+
+                            if(resultado == DialogResult.Yes)
+                            {
+                                // Abrir o Google Drive no navegador
+                                Process.Start(new ProcessStartInfo
+                                {
+                                    FileName = "https://drive.google.com/drive/folders/1ESvx_MKLOlLGgZMLDX6tzmGNrXiSGpb6",
+                                    UseShellExecute = true
+                                });
+                            }
                             return; // Interrompe a execução do código
                         }
                         pedirColaborador pedirColaborador = new pedirColaborador();
