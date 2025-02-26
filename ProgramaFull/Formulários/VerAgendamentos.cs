@@ -10,8 +10,9 @@
     using System.Text.Json;
     using System.Drawing.Text;
     using System.Diagnostics;
+using System.DirectoryServices.ActiveDirectory;
 
-    namespace ProgramaFull.Formulários
+namespace ProgramaFull.Formulários
     {
     public partial class VerAgendamentos : Form
     {
@@ -285,16 +286,16 @@
 
         private void buttonComecar_click(object sender, EventArgs e, string nomePasta, string statusStatus)
         {
-            Close();
             // Verifica se o nomePasta pode ser convertido para um número válido
             if (int.TryParse(nomePasta, out int numeroAgendamento))
             {
                 // Armazena o número do agendamento e o status atual no programa
                 Program.nomePasta = numeroAgendamento;
                 Program.statusAtual = statusStatus;
+                string caminhoEmbalarJson = Path.Combine("P:\\INFORMATICA\\programas\\FULL\\KelvinV2\\agendamentos", nomePasta, $"{numeroAgendamento}_Embalar.json");
 
                 Button clickedButton = sender as Button; // Identifica o botão que foi clicado
-
+               
                 if (clickedButton != null && clickedButton.Text == "Começar")
                 {
                     // Dicionário com a ordem das etapas
@@ -312,6 +313,17 @@
                         pedirEmpresa janelaEmpresa = new pedirEmpresa();
                         janelaEmpresa.Show();
                         this.Close(); // Fecha a janela atual
+                    }
+                    else if (statusStatus == "Embalar")
+                    {
+                        if(!File.Exists(caminhoEmbalarJson))
+                        {
+                            MessageBox.Show($"O arquivo {numeroAgendamento}_Embalar.json não foi encontrado. Não é possível continuar.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return; // Interrompe a execução do código
+                        }
+                        pedirColaborador pedirColaborador = new pedirColaborador();
+                        pedirColaborador.Show();
+                        this.Close();
                     }
                     else if (proximaEtapa.ContainsKey(statusStatus))
                     {
@@ -354,6 +366,7 @@
                 // Exibe mensagem de erro caso o nomePasta não seja um número válido
                 MessageBox.Show("O número do agendamento precisa ser um número válido.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            Close();
         }
 
 
