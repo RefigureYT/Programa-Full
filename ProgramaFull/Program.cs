@@ -191,7 +191,7 @@ namespace ProgramaFull
             File.WriteAllText(caminhoJson, novoJson);
         }
 
-        public static void BuscarAccessTokenTiny()
+        public static async Task BuscarAccessTokenTinyAsync()
         {
             string connString = "Host=192.168.15.200;Port=5432;Username=root;Password=T3Jetm3Mz4N8CDK1ovj3XhC2w6n0PTeEb189Q2D2AjobuxP2Me;Database=n8n_geral_db";
 
@@ -199,12 +199,12 @@ namespace ProgramaFull
             {
                 try
                 {
-                    conn.Open();
+                    await conn.OpenAsync();
                     string query = "SELECT access_token FROM public.api_tokens WHERE nome = 'Silvio'";
 
                     using (var cmd = new NpgsqlCommand(query, conn))
                     {
-                        object result = cmd.ExecuteScalar();
+                        object result = await cmd.ExecuteScalarAsync();
                         accessTokenTinyV3 = result?.ToString(); // Define a variável global com o access_token
 
                         if (string.IsNullOrEmpty(accessTokenTinyV3))
