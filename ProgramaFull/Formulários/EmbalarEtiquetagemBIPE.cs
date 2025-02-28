@@ -232,7 +232,7 @@ namespace ProgramaFull.Formulários
 
         public static async Task<string> BuscarImagemProdutoTiny(string idProduto)
         {
-            if(string.IsNullOrEmpty(Program.accessTokenTinyV3))
+            if (string.IsNullOrEmpty(Program.accessTokenTinyV3))
             {
                 // Buscar o Access Token
                 await Program.BuscarAccessTokenTinyAsync();
@@ -242,7 +242,7 @@ namespace ProgramaFull.Formulários
             if (string.IsNullOrEmpty(Program.accessTokenTinyV3))
             {
                 MessageBox.Show("Erro ao obter o Access Token.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return "https://via.placeholder.com/100"; // Imagem padrão caso falhe
+                return "https://i.imgur.com/tWvwe0s.png"; // Imagem padrão caso falhe
             }
 
             try
@@ -254,6 +254,18 @@ namespace ProgramaFull.Formulários
                     string url = $"https://api.tiny.com.br/public-api/v3/produtos/{idProduto}";
 
                     HttpResponseMessage response = await client.GetAsync(url);
+
+                    // Se for erro 403, tenta buscar a chave de novo e refazer a requisição
+                    if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                    {
+                        MessageBox.Show("Erro 403: Acesso negado. Tentando buscar nova chave de API...", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        await Program.BuscarAccessTokenTinyAsync();
+
+                        // Refaz a requisição com a nova chave
+                        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Program.accessTokenTinyV3);
+                        response = await client.GetAsync(url);
+                    }
+
                     if (response.IsSuccessStatusCode)
                     {
                         string jsonResponse = await response.Content.ReadAsStringAsync();
@@ -274,7 +286,7 @@ namespace ProgramaFull.Formulários
                 MessageBox.Show($"Erro ao buscar imagem no Tiny: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
 
-            return "https://via.placeholder.com/100"; // Imagem padrão caso não encontre
+            return "https://i.imgur.com/tWvwe0s.png"; // Imagem padrão caso não encontre
         }
 
         private void CarregarAnuncios()
