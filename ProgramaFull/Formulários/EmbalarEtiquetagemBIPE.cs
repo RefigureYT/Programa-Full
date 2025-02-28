@@ -10,6 +10,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Text.Json.Serialization;
 
 namespace ProgramaFull.Formulários
 {
@@ -262,15 +263,34 @@ namespace ProgramaFull.Formulários
 
             // Buscar composição do kit
             var composicao = await BuscarComposicaoDoKit(idProduto);
-
-            telaCarregamento.Close(); // Fechar tela de carregamento
-
-            // Se não for um kit, mostrar mensagem e sair
             if (composicao == null)
             {
+                telaCarregamento.Close();
                 MessageBox.Show("Este produto não é um kit e não pode ser confirmado dessa forma.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
+
+            // Lista de produtos com seus detalhes (ID, SKU, descrição, GTIN)
+            List<ProdutoComposicao> composicaoDetalhada = new List<ProdutoComposicao>();
+
+            // Para cada produto na composição, buscar mais detalhes
+            foreach (var produto in composicao)
+            {
+                var detalhesProduto = await BuscarDetalhesProdutoTiny(produto.ID.ToString());
+                if (detalhesProduto != null)
+                {
+                    composicaoDetalhada.Add(new ProdutoComposicao
+                    {
+                        ID = detalhesProduto.ID,
+                        SKU = detalhesProduto.SKU,
+                        Descricao = detalhesProduto.Descricao,
+                        CodigoBarras = detalhesProduto.CodigoBarras, // Código de barras
+                        Quantidade = produto.Quantidade
+                    });
+                }
+            }
+
+            telaCarregamento.Close(); // Fechar tela de carregamento
 
             // Criar novo formulário para exibir a composição
             Form formConfirmacao = new Form
@@ -317,25 +337,22 @@ namespace ProgramaFull.Formulários
             };
             panel.Controls.Add(labelComposicao);
 
-            // Criar lista para armazenar os SKUs que precisam ser bipados
-            List<string> produtosFaltantes = new List<string>();
+            // Criar lista para armazenar os SKUs e GTINs que precisam ser bipados
+            Dictionary<string, int> quantidadeBipada = new Dictionary<string, int>();
 
-            foreach (var produto in composicao)
+            foreach (var produto in composicaoDetalhada)
             {
+                quantidadeBipada[produto.SKU] = 0; // Inicia com 0 bipagens
+
                 Label produtoLabel = new Label
                 {
                     Text = $"{produto.Descricao} - {produto.Quantidade} Unidades",
                     Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                    ForeColor = Program.kitsConfirmados.Contains(produto.ID) ? Color.Green : Color.Red,
+                    ForeColor = Color.Red, // Começa vermelho
                     AutoSize = true
                 };
 
                 panel.Controls.Add(produtoLabel);
-
-                if (!Program.kitsConfirmados.Contains(produto.ID))
-                {
-                    produtosFaltantes.Add(produto.SKU);
-                }
             }
 
             // Campo de entrada para bipar os produtos
@@ -345,22 +362,43 @@ namespace ProgramaFull.Formulários
                 if (e.KeyCode == Keys.Enter)
                 {
                     string bipado = textBoxBipagem.Text.Trim();
-                    if (produtosFaltantes.Contains(bipado))
-                    {
-                        produtosFaltantes.Remove(bipado);
-                        textBoxBipagem.Clear();
+                    bool produtoEncontrado = false;
 
-                        if (produtosFaltantes.Count == 0)
+                    foreach (var produto in composicaoDetalhada)
+                    {
+                        if (produto.SKU == bipado || produto.CodigoBarras == bipado)
                         {
-                            // Todos os produtos foram bipados, confirmar o kit
-                            Program.kitsConfirmados.Add(int.Parse(idProduto));
-                            MessageBox.Show("Kit confirmado com sucesso!", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            formConfirmacao.Close();
+                            quantidadeBipada[produto.SKU]++;
+
+                            // Atualiza a cor do label correspondente ao produto bipado
+                            foreach (Control control in panel.Controls)
+                            {
+                                if (control is Label label && label.Text.Contains(produto.Descricao))
+                                {
+                                    if (quantidadeBipada[produto.SKU] >= produto.Quantidade)
+                                    {
+                                        label.ForeColor = Color.Green; // Quando atinge a quantidade necessária, fica verde
+                                    }
+                                }
+                            }
+
+                            produtoEncontrado = true;
+                            break;
                         }
                     }
-                    else
+
+                    textBoxBipagem.Clear();
+
+                    if (!produtoEncontrado)
                     {
                         MessageBox.Show("Este produto não faz parte da composição ou já foi bipado!", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                    else if (composicaoDetalhada.All(p => quantidadeBipada.ContainsKey(p.SKU) && quantidadeBipada[p.SKU] >= p.Quantidade))
+
+                            {
+                                Program.kitsConfirmados.Add(int.Parse(idProduto));
+                        MessageBox.Show("Kit confirmado com sucesso!", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        formConfirmacao.Close();
                     }
                 }
             };
@@ -368,6 +406,109 @@ namespace ProgramaFull.Formulários
             panel.Controls.Add(textBoxBipagem);
             formConfirmacao.Controls.Add(panel);
             formConfirmacao.ShowDialog();
+        }
+
+        public static async Task<ProdutoComposicao> BuscarDetalhesProdutoTiny(string idProduto)
+        {
+            if (string.IsNullOrEmpty(Program.accessTokenTinyV3))
+            {
+                await Program.BuscarAccessTokenTinyAsync();
+            }
+
+            try
+            {
+                using (HttpClient client = new HttpClient())
+                {
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Program.accessTokenTinyV3);
+
+                    string url = $"https://api.tiny.com.br/public-api/v3/produtos/{idProduto}";
+                    HttpResponseMessage response = await client.GetAsync(url);
+
+                    if (response.StatusCode == HttpStatusCode.Forbidden)
+                    {
+                        await Program.BuscarAccessTokenTinyAsync();
+                        return await BuscarDetalhesProdutoTiny(idProduto);
+                    }
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        string jsonResponse = await response.Content.ReadAsStringAsync();
+                        var produto = JsonSerializer.Deserialize<ProdutoTinyResponse>(jsonResponse, new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        });
+
+                        return new ProdutoComposicao
+                        {
+                            ID = produto.Id,
+                            SKU = produto.Sku,
+                            Descricao = produto.Descricao,
+                            CodigoBarras = produto.Gtin
+                        };
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Erro ao buscar detalhes do produto: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
+            return null;
+        }
+
+        public static async Task<string> BuscarCodigoBarrasProdutoTiny(string idProduto)
+        {
+            if (string.IsNullOrEmpty(Program.accessTokenTinyV3))
+            {
+                // Buscar o Access Token se ainda não foi buscado
+                await Program.BuscarAccessTokenTinyAsync();
+            }
+
+            // Verifica se o token foi obtido
+            if (string.IsNullOrEmpty(Program.accessTokenTinyV3))
+            {
+                MessageBox.Show("Erro ao obter o Access Token.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return string.Empty; // Retorna uma string vazia caso falhe
+            }
+
+            try
+            {
+                using (HttpClient client = new HttpClient())
+                {
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Program.accessTokenTinyV3);
+
+                    string url = $"https://api.tiny.com.br/public-api/v3/produtos/{idProduto}";
+                    HttpResponseMessage response = await client.GetAsync(url);
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        string jsonResponse = await response.Content.ReadAsStringAsync();
+                        var produto = JsonSerializer.Deserialize<ProdutoTinyResponse>(jsonResponse, new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        });
+
+                        if (produto != null)
+                        {
+                            string codigoBarras = produto.Gtin ?? string.Empty;
+                            return codigoBarras;
+                        }
+
+                    }
+                    else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                    {
+                        // Caso a chave de API esteja inválida, buscar um novo token e tentar novamente
+                        await Program.BuscarAccessTokenTinyAsync();
+                        return await BuscarCodigoBarrasProdutoTiny(idProduto); // Tenta novamente
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Erro ao buscar código de barras no Tiny: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
+            return string.Empty; // Retorna uma string vazia caso não encontre
         }
 
         private async Task<List<ProdutoComposicao>> BuscarComposicaoDoKit(string idProduto)
@@ -505,42 +646,91 @@ namespace ProgramaFull.Formulários
 
         public class ProdutoResponse
         {
+            [JsonPropertyName("anexos")]
             public List<Anexo> Anexos { get; set; } // Lista de anexos/imagens do produto
         }
 
         public class Anexo
         {
+            [JsonPropertyName("url")]
             public string Url { get; set; }  // URL da imagem
+
+            [JsonPropertyName("externo")]
             public bool Externo { get; set; }  // Indica se é um anexo externo
         }
 
         public class ProdutoTinyResponse
         {
+            [JsonPropertyName("id")]
             public int Id { get; set; }
+
+            [JsonPropertyName("sku")]
             public string Sku { get; set; }
+
+            [JsonPropertyName("descricao")]
             public string Descricao { get; set; }
-            public List<KitProduto> Kit { get; set; }
+
+            [JsonPropertyName("tipo")]
+            public string Tipo { get; set; } // Verifica se é um kit ("K") ou produto simples ("S")
+
+            [JsonPropertyName("gtin")]
+            public string Gtin { get; set; } // Código de barras
+
+            [JsonPropertyName("anexos")]
+            public List<AnexoTiny> Anexos { get; set; }
+
+            [JsonPropertyName("kit")]
+            public List<ProdutoComposicao> Kit { get; set; }
+        }
+
+
+        // Classe auxiliar para armazenar anexos (imagens)
+        public class AnexoTiny
+        {
+            [JsonPropertyName("url")]
+            public string Url { get; set; }
         }
 
         public class KitProduto
         {
+            [JsonPropertyName("produto")]
             public ProdutoInfo Produto { get; set; }
+
+            [JsonPropertyName("quantidade")]
             public int Quantidade { get; set; }
         }
 
         public class ProdutoInfo
         {
+            [JsonPropertyName("id")]
             public int ID { get; set; }
+
+            [JsonPropertyName("sku")]
             public string SKU { get; set; }
+
+            [JsonPropertyName("descricao")]
             public string Descricao { get; set; }
         }
 
         public class ProdutoComposicao
         {
+            [JsonPropertyName("produto")]
+            public ProdutoInfo Produto { get; set; }
+
+            [JsonPropertyName("id")]
             public int ID { get; set; }
+
+            [JsonPropertyName("sku")]
             public string SKU { get; set; }
+
+            [JsonPropertyName("descricao")]
             public string Descricao { get; set; }
+
+            [JsonPropertyName("quantidade")]
             public int Quantidade { get; set; }
+
+            [JsonPropertyName("gtin")]
+            public string CodigoBarras { get; set; } // Código de barras do produto
         }
 
     }
