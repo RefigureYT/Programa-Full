@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Linq;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -203,6 +204,8 @@ namespace ProgramaFull.Formulários
                     Padding = new Padding(5)
                 };
 
+                kitPanel.Click += (s, e) => AbrirFormularioConfirmacaoKit(idProduto, anunciosEncontrados[idsProdutos.IndexOf(idProduto)], imagemUrl);
+
                 PictureBox pictureBox = new PictureBox
                 {
                     Size = new Size(100, 100),
@@ -228,6 +231,184 @@ namespace ProgramaFull.Formulários
 
             formKits.Controls.Add(panel);
             formKits.ShowDialog();
+        }
+
+        private async void AbrirFormularioConfirmacaoKit(string idProduto, string nomeKit, string imagemUrl)
+        {
+            // Se o kit já foi confirmado, impedir a reabertura
+            if (Program.kitsConfirmados.Contains(int.Parse(idProduto)))
+            {
+                MessageBox.Show("Este kit já foi confirmado anteriormente!", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            // Exibir tela de carregamento
+            Form telaCarregamento = new Form
+            {
+                Text = "Carregando...",
+                Size = new Size(300, 150),
+                StartPosition = FormStartPosition.CenterScreen,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                ControlBox = false
+            };
+            Label labelCarregando = new Label
+            {
+                Text = "Aguarde enquanto buscamos a composição...",
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+            telaCarregamento.Controls.Add(labelCarregando);
+            telaCarregamento.Show();
+
+            // Buscar composição do kit
+            var composicao = await BuscarComposicaoDoKit(idProduto);
+
+            telaCarregamento.Close(); // Fechar tela de carregamento
+
+            // Se não for um kit, mostrar mensagem e sair
+            if (composicao == null)
+            {
+                MessageBox.Show("Este produto não é um kit e não pode ser confirmado dessa forma.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // Criar novo formulário para exibir a composição
+            Form formConfirmacao = new Form
+            {
+                Text = "Confirmação do Kit",
+                StartPosition = FormStartPosition.CenterScreen,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                FormBorderStyle = FormBorderStyle.FixedDialog
+            };
+
+            FlowLayoutPanel panel = new FlowLayoutPanel
+            {
+                AutoSize = true,
+                FlowDirection = FlowDirection.TopDown,
+                Padding = new Padding(10),
+                WrapContents = false
+            };
+
+            // Adiciona título
+            Label titulo = new Label
+            {
+                Text = "Por favor, confirme a composição",
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                AutoSize = true
+            };
+            panel.Controls.Add(titulo);
+
+            // Adiciona imagem do kit
+            PictureBox pictureBox = new PictureBox
+            {
+                Size = new Size(250, 250),
+                SizeMode = PictureBoxSizeMode.Zoom,
+                ImageLocation = imagemUrl
+            };
+            panel.Controls.Add(pictureBox);
+
+            // Lista os produtos do kit
+            Label labelComposicao = new Label
+            {
+                Text = "Composição do Kit:",
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                AutoSize = true
+            };
+            panel.Controls.Add(labelComposicao);
+
+            // Criar lista para armazenar os SKUs que precisam ser bipados
+            List<string> produtosFaltantes = new List<string>();
+
+            foreach (var produto in composicao)
+            {
+                Label produtoLabel = new Label
+                {
+                    Text = $"{produto.Descricao} - {produto.Quantidade} Unidades",
+                    Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                    ForeColor = Program.kitsConfirmados.Contains(produto.ID) ? Color.Green : Color.Red,
+                    AutoSize = true
+                };
+
+                panel.Controls.Add(produtoLabel);
+
+                if (!Program.kitsConfirmados.Contains(produto.ID))
+                {
+                    produtosFaltantes.Add(produto.SKU);
+                }
+            }
+
+            // Campo de entrada para bipar os produtos
+            TextBox textBoxBipagem = new TextBox { Width = 200 };
+            textBoxBipagem.KeyDown += (sender, e) =>
+            {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    string bipado = textBoxBipagem.Text.Trim();
+                    if (produtosFaltantes.Contains(bipado))
+                    {
+                        produtosFaltantes.Remove(bipado);
+                        textBoxBipagem.Clear();
+
+                        if (produtosFaltantes.Count == 0)
+                        {
+                            // Todos os produtos foram bipados, confirmar o kit
+                            Program.kitsConfirmados.Add(int.Parse(idProduto));
+                            MessageBox.Show("Kit confirmado com sucesso!", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            formConfirmacao.Close();
+                        }
+                    }
+                    else
+                    {
+                        MessageBox.Show("Este produto não faz parte da composição ou já foi bipado!", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                }
+            };
+
+            panel.Controls.Add(textBoxBipagem);
+            formConfirmacao.Controls.Add(panel);
+            formConfirmacao.ShowDialog();
+        }
+
+        private async Task<List<ProdutoComposicao>> BuscarComposicaoDoKit(string idProduto)
+        {
+            if (string.IsNullOrEmpty(Program.accessTokenTinyV3))
+            {
+                await Program.BuscarAccessTokenTinyAsync();
+            }
+
+            using (HttpClient client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Program.accessTokenTinyV3);
+                string url = $"https://api.tiny.com.br/public-api/v3/produtos/{idProduto}";
+
+                HttpResponseMessage response = await client.GetAsync(url);
+                if (response.StatusCode == HttpStatusCode.Forbidden)
+                {
+                    // Tentar novamente buscando nova chave
+                    await Program.BuscarAccessTokenTinyAsync();
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Program.accessTokenTinyV3);
+                    response = await client.GetAsync(url);
+                }
+
+                if (response.IsSuccessStatusCode)
+                {
+                    string jsonResponse = await response.Content.ReadAsStringAsync();
+                    var produto = JsonSerializer.Deserialize<ProdutoTinyResponse>(jsonResponse, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (produto != null && produto.Kit != null && produto.Kit.Count > 0)
+                    {
+                        return produto.Kit.Select(p => new ProdutoComposicao
+                        {
+                            ID = p.Produto.ID,
+                            SKU = p.Produto.SKU,
+                            Descricao = p.Produto.Descricao,
+                            Quantidade = p.Quantidade
+                        }).ToList();
+                    }
+                }
+            }
+            return null; // Retorna null se não for um kit
         }
 
         public static async Task<string> BuscarImagemProdutoTiny(string idProduto)
@@ -332,5 +513,35 @@ namespace ProgramaFull.Formulários
             public string Url { get; set; }  // URL da imagem
             public bool Externo { get; set; }  // Indica se é um anexo externo
         }
+
+        public class ProdutoTinyResponse
+        {
+            public int Id { get; set; }
+            public string Sku { get; set; }
+            public string Descricao { get; set; }
+            public List<KitProduto> Kit { get; set; }
+        }
+
+        public class KitProduto
+        {
+            public ProdutoInfo Produto { get; set; }
+            public int Quantidade { get; set; }
+        }
+
+        public class ProdutoInfo
+        {
+            public int ID { get; set; }
+            public string SKU { get; set; }
+            public string Descricao { get; set; }
+        }
+
+        public class ProdutoComposicao
+        {
+            public int ID { get; set; }
+            public string SKU { get; set; }
+            public string Descricao { get; set; }
+            public int Quantidade { get; set; }
+        }
+
     }
 }

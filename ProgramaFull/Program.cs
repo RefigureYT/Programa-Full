@@ -20,6 +20,9 @@ namespace ProgramaFull
         public static string permanencia = string.Empty;
         public static string accessTokenTinyV3 = string.Empty;
 
+
+        public static List<int> kitsConfirmados = new List<int>();
+
         /// <summary>
         ///  The main entry point for    the application. 
         /// </summary>
