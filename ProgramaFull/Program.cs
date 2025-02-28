@@ -1,14 +1,16 @@
 using System.Linq.Expressions;
 using System.Text.Json;
 using ProgramaFull.Formulários;
+using Npgsql;
+
 namespace ProgramaFull
 {
     internal static class Program
     {
         public static int nomePasta;
-        public static string nomeColaborador;
-        public static string nomeEmpresa;
-        public static string statusAtual;
+        public static string nomeColaborador = string.Empty;
+        public static string nomeEmpresa = string.Empty;
+        public static string statusAtual = string.Empty;
         public static string modoDEVpreConfForm = "OFF";
         public static string modoDevCODE = "2802200824012011153264897123456789147258369";
         public static bool confirmarEmpresa;
@@ -16,6 +18,7 @@ namespace ProgramaFull
         public static string impressoraEtiqueta = string.Empty;
         public static string dataHoraInicioRelatorio = string.Empty;
         public static string permanencia = string.Empty;
+        public static string accessTokenTinyV3 = string.Empty;
 
         /// <summary>
         ///  The main entry point for    the application. 
@@ -86,12 +89,12 @@ namespace ProgramaFull
                 }
 
                 jsonData[proximaEtapa].Add(new Dictionary<string, object>
-        {
-            { "Status", proximaEtapa },
-            { "Empresa", empresaAtual },
-            { "Concluído", false },
-            { "Colaborador", colaboradorAtual }
-        });
+                {
+                    { "Status", proximaEtapa },
+                    { "Empresa", empresaAtual },
+                    { "Concluído", false },
+                    { "Colaborador", colaboradorAtual }
+                });
 
                 // Salva o arquivo JSON atualizado
                 string jsonAtualizado = JsonSerializer.Serialize(jsonData, new JsonSerializerOptions { WriteIndented = true });
@@ -188,5 +191,33 @@ namespace ProgramaFull
             File.WriteAllText(caminhoJson, novoJson);
         }
 
+        public static void BuscarAccessTokenTiny()
+        {
+            string connString = "Host=192.168.15.200;Port=5432;Username=root;Password=T3Jetm3Mz4N8CDK1ovj3XhC2w6n0PTeEb189Q2D2AjobuxP2Me;Database=n8n_geral_db";
+
+            using (var conn = new NpgsqlConnection(connString))
+            {
+                try
+                {
+                    conn.Open();
+                    string query = "SELECT access_token FROM public.api_tokens WHERE nome = 'Silvio'";
+
+                    using (var cmd = new NpgsqlCommand(query, conn))
+                    {
+                        object result = cmd.ExecuteScalar();
+                        accessTokenTinyV3 = result?.ToString(); // Define a variável global com o access_token
+
+                        if (string.IsNullOrEmpty(accessTokenTinyV3))
+                        {
+                            MessageBox.Show("Access Token não encontrado no banco de dados.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Erro ao conectar ao banco de dados:\n{ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
     }
 }

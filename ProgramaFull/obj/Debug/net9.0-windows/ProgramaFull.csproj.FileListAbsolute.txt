@@ -61,3 +61,5 @@ C:\Users\User\3D Objects\GitHub Kelvin\Programa-Full\Programa-Full\ProgramaFull\
 C:\Users\User\3D Objects\GitHub Kelvin\Programa-Full\Programa-Full\ProgramaFull\obj\Debug\net9.0-windows\ProgramaFull.pdb
 C:\Users\User\3D Objects\GitHub Kelvin\Programa-Full\Programa-Full\ProgramaFull\obj\Debug\net9.0-windows\ProgramaFull.genruntimeconfig.cache
 C:\Users\User\3D Objects\GitHub Kelvin\Programa-Full\Programa-Full\ProgramaFull\obj\Debug\net9.0-windows\ref\ProgramaFull.dll
+C:\Users\User\3D Objects\GitHub Kelvin\Programa-Full\Programa-Full\ProgramaFull\obj\Debug\net9.0-windows\ProgramaFull.csproj.AssemblyReference.cache
+C:\Users\User\3D Objects\GitHub Kelvin\Programa-Full\Programa-Full\ProgramaFull\obj\Debug\net9.0-windows\Programa.1BBB76C2.Up2Date
