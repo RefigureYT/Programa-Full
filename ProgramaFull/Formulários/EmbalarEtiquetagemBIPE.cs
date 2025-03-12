@@ -561,7 +561,6 @@ namespace ProgramaFull.Formulários
 ^FO{xColunaEsquerda + 75},75^A0N,20,25^FH^FD{etiqueta.EtiquetaId}^FS
 ^FO{xColunaEsquerda + 75},76^A0N,20,25^FH^FD{etiqueta.EtiquetaId}^FS
 ^FO{xColunaEsquerda - 14},115^A0N,18,18^FB300,2,2,L^FH^FD{etiqueta.Anuncio}^FS
-^FO{xColunaEsquerda - 14},153^A0N,18,18^FB300,1,0,L^FH^FD{produto.NomeProduto}^FS
 ^FO{xColunaEsquerda - 14},172^A0N,18,18^FH^FDSKU: {produto.SKU}^FS");
                     etiquetasGeradas++;
                 }
@@ -574,7 +573,6 @@ namespace ProgramaFull.Formulários
 ^FO{xColunaDireita + 75},75^A0N,20,25^FH^FD{etiqueta.EtiquetaId}^FS
 ^FO{xColunaDireita + 75},76^A0N,20,25^FH^FD{etiqueta.EtiquetaId}^FS
 ^FO{xColunaDireita - 14},115^A0N,18,18^FB300,2,2,L^FH^FD{etiqueta.Anuncio}^FS
-^FO{xColunaDireita - 14},153^A0N,18,18^FB300,1,0,L^FH^FD{produto.NomeProduto}^FS
 ^FO{xColunaDireita - 14},172^A0N,18,18^FH^FDSKU: {produto.SKU}^FS");
                     etiquetasGeradas++;
                 }
@@ -582,6 +580,18 @@ namespace ProgramaFull.Formulários
                 // Fim de cada label set
                 zplCompleto.Append("\n^XZ\n");
             }
+
+            // Criar diretório "Etiquetas" se não existir
+            string diretorio = Path.GetDirectoryName(caminhoJson);
+            string dirEtiquetas = Path.Combine(diretorio, "Etiquetas");
+            if (!Directory.Exists(dirEtiquetas))
+            {
+                Directory.CreateDirectory(dirEtiquetas);
+            }
+
+            // Salvar o conteúdo ZPL no diretório "Etiquetas" para depuração
+            string nomeArquivo = Path.Combine(dirEtiquetas, $"{etiqueta.EtiquetaId}_Etiquetas.txt");
+            File.WriteAllText(nomeArquivo, zplCompleto.ToString());
 
             return zplCompleto.ToString();
         }
@@ -938,7 +948,6 @@ namespace ProgramaFull.Formulários
             [JsonPropertyName("kit")]
             public List<ProdutoComposicao> Kit { get; set; }
         }
-
 
         // Classe auxiliar para armazenar anexos (imagens)
         public class AnexoTiny
