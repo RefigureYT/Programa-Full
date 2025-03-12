@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\User\\3D Objects\\GitHub Kelvin\\Programa-Full\\Programa-Full\\ProgramaFull\\ProgramaFull.csproj": {}
+    "C:\\Users\\User\\3D Objects\\GitHub Kelvin\\Programa-Full\\ProgramaFull\\ProgramaFull.csproj": {}
   },
   "projects": {
-    "C:\\Users\\User\\3D Objects\\GitHub Kelvin\\Programa-Full\\Programa-Full\\ProgramaFull\\ProgramaFull.csproj": {
+    "C:\\Users\\User\\3D Objects\\GitHub Kelvin\\Programa-Full\\ProgramaFull\\ProgramaFull.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\User\\3D Objects\\GitHub Kelvin\\Programa-Full\\Programa-Full\\ProgramaFull\\ProgramaFull.csproj",
+        "projectUniqueName": "C:\\Users\\User\\3D Objects\\GitHub Kelvin\\Programa-Full\\ProgramaFull\\ProgramaFull.csproj",
         "projectName": "ProgramaFull",
-        "projectPath": "C:\\Users\\User\\3D Objects\\GitHub Kelvin\\Programa-Full\\Programa-Full\\ProgramaFull\\ProgramaFull.csproj",
+        "projectPath": "C:\\Users\\User\\3D Objects\\GitHub Kelvin\\Programa-Full\\ProgramaFull\\ProgramaFull.csproj",
         "packagesPath": "C:\\Users\\User\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\User\\3D Objects\\GitHub Kelvin\\Programa-Full\\Programa-Full\\ProgramaFull\\obj\\",
+        "outputPath": "C:\\Users\\User\\3D Objects\\GitHub Kelvin\\Programa-Full\\ProgramaFull\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
