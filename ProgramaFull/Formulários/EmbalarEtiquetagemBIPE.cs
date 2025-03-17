@@ -12,6 +12,8 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Text.Json.Serialization;
 using System.Runtime.InteropServices;
+using Microsoft.VisualBasic;
+using static ProgramaFull.Formulários.EmbalarEtiquetagemBIPE;
 
 namespace ProgramaFull.Formulários
 {
@@ -320,8 +322,31 @@ namespace ProgramaFull.Formulários
                 }
 
                 // Pegar o nome da chave do array como EtiquetaId
+                // Encontrar a chave que contém a lista de produtos
+                // Encontrar a etiqueta correta associada ao produto específico do anúncio
                 string etiquetaIdSimples = produtoData.Keys.FirstOrDefault(k =>
-                    k != "Anuncio" && k != "ID" && k != "SKU" && k != "Qtd Etiquetas");
+                    k != "Anuncio" && k != "ID" && k != "SKU" && k != "Qtd Etiquetas" &&
+                    produtoData[k] is JsonElement element && element.ValueKind == JsonValueKind.Array);
+
+                // Verifica se encontrou a etiqueta correta para o anúncio atual
+                if (!string.IsNullOrEmpty(etiquetaIdSimples) && produtoData.ContainsKey(etiquetaIdSimples))
+                {
+                    var listaDeProdutos = produtoData[etiquetaIdSimples] as JsonElement?;
+
+                    if (listaDeProdutos != null && listaDeProdutos?.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (JsonElement item in listaDeProdutos.Value.EnumerateArray())
+                        {
+                            if (item.TryGetProperty("SKU", out JsonElement produtoSkuElement) &&
+                                produtoSkuElement.GetString() == produtoData["SKU"].ToString()) // Agora confere com o SKU do anúncio
+                            {
+                                // Se o SKU do produto dentro da lista de etiqueta bate com o SKU do anúncio
+                                etiquetaIdSimples = etiquetaIdSimples;
+                                break;
+                            }
+                        }
+                    }
+                }
 
                 if (string.IsNullOrEmpty(etiquetaIdSimples) || !produtoData.ContainsKey(etiquetaIdSimples))
                 {
@@ -349,7 +374,96 @@ namespace ProgramaFull.Formulários
                 string skuProduto = skuElement.GetString();
                 string codigoBarrasProduto = produtoInfo.Value.TryGetProperty("Codebar", out JsonElement codebarElement) ? codebarElement.GetString() : "";
 
-                if (MessageBox.Show($"Deseja imprimir as etiquetas do anúncio \"{nomeKit}\"?", "Produto Simples", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                string caminhoEtiqueta = Path.Combine($"P:\\INFORMATICA\\programas\\FULL\\KelvinV2\\agendamentos\\{Program.nomePasta}\\Etiquetas",
+                    $"{etiquetaIdSimples}_Etiquetas.txt");
+                bool etiquetaImpressa = File.Exists(caminhoEtiqueta);
+
+                MessageBox.Show($"{etiquetaImpressa} \n\n {caminhoEtiqueta}");
+                if (etiquetaImpressa) // Se a etiqueta já foi impressa
+                { // Então fala que já foi impressa né kkkk
+                    // Aí ele tem que perguntar se o usuário quer imprimir de novo
+
+                    if (MessageBox.Show("As etiquetas deste produto já foram impressas. \n\n Deseja imprimir novamente? (Será necessário a senha de administrador)", "Status etiqueta", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                    {
+                        Form formSenha = new Form
+                        {
+                            Text = "Confirmação de Produto",
+                            StartPosition = FormStartPosition.CenterScreen,
+                            AutoSize = true,
+                            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                            FormBorderStyle = FormBorderStyle.FixedDialog,
+                            BackColor = Color.White
+                        };
+
+                        FlowLayoutPanel painel = new FlowLayoutPanel
+                        {
+                            AutoSize = true,
+                            FlowDirection = FlowDirection.TopDown,
+                            Padding = new Padding(10),
+                            WrapContents = false
+                        };
+
+                        Label labelSenha = new Label
+                        {
+                            Text = "Por favor insira a senha de administrador para a impressão.",
+                            Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                            AutoSize = true
+                        };
+                        painel.Controls.Add(labelSenha);
+
+                        TextBox textBoxSenha = new TextBox { Width = 200 };
+                        textBoxSenha.UseSystemPasswordChar = true;
+
+                        painel.Controls.Add(textBoxSenha);
+
+                        formSenha.Controls.Add(painel);
+                        textBoxSenha.Focus();
+
+                        textBoxSenha.KeyDown += (sender, e) =>
+                        {
+                            if (e.KeyCode == Keys.Enter)
+                            {
+                                string senhaDigitada = textBoxSenha.Text.Trim();
+
+                                if (senhaDigitada == Program.modoDevCODE) // Senha de administrador
+                                {
+                                    formSenha.Close();
+                                    MessageBox.Show("Senha correta! Etiqueta Confirmada!", "Confirmação", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                    if (MessageBox.Show("Deseja imprimir?", "Status Impressão", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                                    {
+                                        Etiqueta etiqueta = new Etiqueta
+                                        {
+                                            EtiquetaId = etiquetaIdSimples,
+                                            Anuncio = produtoData["Anuncio"].ToString(),
+                                            QtdEtiquetas = int.Parse(produtoData["Qtd Etiquetas"].ToString())
+                                        };
+                                        Produto produto = new Produto
+                                        {
+                                            NomeProduto = produtoData["Anuncio"].ToString(),
+                                            SKU = skuProduto,
+                                            CodigoBarras = codigoBarrasProduto
+                                        };
+
+                                        MessageBox.Show("Etiqueta Confirmada!\n\nEtiqueta: " + etiqueta.EtiquetaId + "\nAnúncio: " + etiqueta.Anuncio + "\nSKU: " + produto.SKU + "\nQuantidade: " + etiqueta.QtdEtiquetas, "Confirmação", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                        //ImprimirEtiquetas(etiqueta, produto);
+                                    }
+                                    else
+                                    {
+                                        MessageBox.Show("Não será impresso ;-)", "Status Impressão", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                    }
+                                }
+                                else
+                                {
+                                    MessageBox.Show("Senha incorreta!", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                    textBoxSenha.Clear();
+
+                                }
+                            };
+                        };
+                        formSenha.ShowDialog();
+                    }
+                }
+                else if (MessageBox.Show($"Deseja imprimir as etiquetas do anúncio \"{nomeKit}\"?", "Produto Simples", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                 {
                     Form formBipagem = new Form
                     {
