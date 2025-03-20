@@ -14,6 +14,7 @@ using System.Text.Json.Serialization;
 using System.Runtime.InteropServices;
 using Microsoft.VisualBasic;
 using static ProgramaFull.Formulários.EmbalarEtiquetagemBIPE;
+using System.Security.Cryptography.X509Certificates;
 
 namespace ProgramaFull.Formulários
 {
@@ -65,7 +66,7 @@ namespace ProgramaFull.Formulários
                 this.Close();                    // Precisa Criar a lógica de backup
                 new VerAgendamentos().Show();
             }
-        }
+        } // OK
 
         private void btnQuit_Click(object sender, EventArgs e)
         {
@@ -85,10 +86,16 @@ namespace ProgramaFull.Formulários
                     //}
                 }
             }
-        }
-        
-        private async void codigoProdutoTxtBox_KeyDown(object sender, KeyEventArgs e)
+        } // OK
+
+        private async void codigoProdutoTxtBox_KeyDown(object sender, KeyEventArgs e) // OK
         {
+            //if (codigoProdutoTxtBox.Text.Trim() == Program.modoDevCODE)
+            //{
+            //    ModoDEVEmbalar modoDev = new ModoDEVEmbalar(this);
+            //    modoDev.Show();
+            //}
+
             if (e.KeyCode == Keys.Enter)
             {
                 string codigoBipado = codigoProdutoTxtBox.Text.Trim();
@@ -106,50 +113,17 @@ namespace ProgramaFull.Formulários
                         string jsonContent = File.ReadAllText(caminhoJson);
                         var dados = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(jsonContent);
 
-                        List<string> anunciosEncontrados = new List<string>();
-                        string produtoBipado = "";
+                        // 🔹 Buscar os produtos no JSON
+                        var produtosEncontrados = BuscarProdutoNoJson(codigoBipado, dados);
 
-                        // Percorre cada entrada no JSON
-                        foreach (var entrada in dados)
+                        if (produtosEncontrados.Count > 0)
                         {
-                            if (entrada.ContainsKey("Anuncio") && entrada.ContainsKey("Qtd Etiquetas"))
-                            {
-                                string anuncio = entrada["Anuncio"].ToString();
-
-                                foreach (var chave in entrada.Keys)
-                                {
-                                    // Verifica se é uma chave que contém uma lista de produtos (evita "Anuncio" e "Qtd Etiquetas")
-                                    if (entrada[chave] is JsonElement jsonElement && jsonElement.ValueKind == JsonValueKind.Array)
-                                    {
-                                        foreach (JsonElement item in jsonElement.EnumerateArray())
-                                        {
-                                            if (item.TryGetProperty("SKU", out JsonElement skuElement) &&
-                                                skuElement.GetString() == codigoBipado)
-                                            {
-                                                anunciosEncontrados.Add(anuncio);
-                                                produtoBipado = item.GetProperty("Produto").GetString();
-                                            }
-                                            else if (item.TryGetProperty("Codebar", out JsonElement codebarElement) &&
-                                                     codebarElement.GetString() == codigoBipado)
-                                            {
-                                                anunciosEncontrados.Add(anuncio);
-                                                produtoBipado = item.GetProperty("Produto").GetString();
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // Se o SKU ou Código de Barras foi encontrado em algum anúncio
-                        if (anunciosEncontrados.Count > 0)
-                        {
-                            string anunciosLista = string.Join(" | ", anunciosEncontrados);
-                            await ExibirFormularioKitsAsync(produtoBipado, anunciosEncontrados, dados, codigoBipado);
+                            // Chama o próximo método, passando a lista de objetos
+                            ProcessarProdutosEncontrados(produtosEncontrados);
                         }
                         else
                         {
-                            MessageBox.Show($"O código '{codigoBipado}' não foi encontrado em nenhum anúncio.\n\n" +
+                            MessageBox.Show($"O código '{codigoBipado}' não foi encontrado no agendamento.\n\n" +
                                             "Verifique se digitou corretamente ou se o arquivo JSON está atualizado.",
                                             "Produto Não Encontrado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         }
@@ -165,19 +139,90 @@ namespace ProgramaFull.Formulários
                 e.SuppressKeyPress = true; // Impede o som do "beep" do sistema ao pressionar Enter
             }
         }
-
-        private async Task ExibirFormularioKitsAsync(string produtoBipado, List<string> anunciosEncontrados, List<Dictionary<string, object>> dados, string codigoBipado)
+        private List<Dictionary<string, object>> BuscarProdutoNoJson(string codigoBipado, List<Dictionary<string, object>> dados) // OK
         {
+            List<Dictionary<string, object>> produtosEncontrados = new List<Dictionary<string, object>>();
+
+            // Percorre cada entrada no JSON
+            foreach (var entrada in dados)
+            {
+                if (entrada.ContainsKey("Anuncio") && entrada.ContainsKey("Etiqueta") && entrada.ContainsKey("Qtd Etiquetas"))
+                {
+                    bool encontrado = false;
+
+                    // 🔹 Caso 1: Produto é um KIT (tem "Composicao")
+                    if (entrada.ContainsKey("Composicao") && entrada["Composicao"] is JsonElement composicaoElement && composicaoElement.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (JsonElement item in composicaoElement.EnumerateArray())
+                        {
+                            if ((item.TryGetProperty("SKU", out JsonElement skuElement) && skuElement.GetString() == codigoBipado) ||
+                                (item.TryGetProperty("Codebar", out JsonElement codebarElement) && codebarElement.GetString() == codigoBipado))
+                            {
+                                encontrado = true; // Indica que o produto foi encontrado, mas continua verificando outros anúncios!
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // 🔹 Caso 2: Produto Simples (sem "Composicao")
+                        if ((entrada.ContainsKey("SKU") && entrada["SKU"].ToString() == codigoBipado) ||
+                            (entrada.ContainsKey("Codebar") && entrada["Codebar"].ToString() == codigoBipado))
+                        {
+                            encontrado = true;
+                        }
+                    }
+
+                    // Se encontrou, adiciona na lista de objetos (e não interrompe a busca!)
+                    if (encontrado)
+                    {
+                        var produtoInfo = new Dictionary<string, object>
+                        {
+                            {"Etiqueta", entrada.ContainsKey("Etiqueta") ? entrada["Etiqueta"] : ""},
+                            {"Anuncio", entrada["Anuncio"]},
+                            {"ID", entrada["ID"]},
+                            {"SKU", entrada.ContainsKey("SKU") ? entrada["SKU"] : ""},
+                            {"Qtd Etiquetas", entrada["Qtd Etiquetas"]},
+                            {"Composicao", entrada.ContainsKey("Composicao") ? "Kit" : "Simples"}
+                        };
+
+                        produtosEncontrados.Add(produtoInfo);
+                    }
+                }
+            }
+
+            return produtosEncontrados;
+        }
+
+        private async Task ProcessarProdutosEncontrados(List<Dictionary<string, object>> produtosEncontrados) // OK
+        {
+            // 🔹 Fechar qualquer formulário aberto antes de abrir um novo
+            foreach (Form openForm in Application.OpenForms)
+            {
+                if (openForm.Text == "Kits Encontrados")
+                {
+                    openForm.Close();
+                    break;
+                }
+            }
+
+            // 🔹 Criar o formulário
             Form formKits = new Form
             {
                 Text = "Kits Encontrados",
                 StartPosition = FormStartPosition.CenterScreen,
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Size = new Size(450, 600),
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 BackColor = Color.White
             };
 
+            // 🔹 Criar um painel com rolagem
+            Panel scrollPanel = new Panel
+            {
+                AutoScroll = true,
+                Dock = DockStyle.Fill
+            };
+
+            // 🔹 Criar um painel para exibir os kits e produtos
             FlowLayoutPanel panel = new FlowLayoutPanel
             {
                 AutoSize = true,
@@ -186,90 +231,81 @@ namespace ProgramaFull.Formulários
                 WrapContents = false
             };
 
+            // 🔹 Adicionar título ao formulário
             Label titulo = new Label
             {
-                Text = $"Produto Bipado: {produtoBipado}",
+                Text = "Produto Bipado Encontrado nos Anúncios:",
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
                 AutoSize = true,
                 ForeColor = Color.Black
             };
             panel.Controls.Add(titulo);
 
-            List<string> idsProdutos = new List<string>(); // Lista para armazenar os IDs dos produtos
+            // 🔹 Criar um HashSet para evitar anúncios duplicados
+            HashSet<string> anunciosExibidos = new HashSet<string>();
 
-            // Adicionar os kits dinamicamente
-            foreach (var entrada in dados)
+            // 🔹 Adicionar os kits e produtos ao painel
+            foreach (var produto in produtosEncontrados)
             {
-                if (entrada.ContainsKey("Anuncio") && entrada.ContainsKey("ID"))
-                {
-                    string nomeAnuncio = entrada["Anuncio"].ToString();
-                    string idProduto = entrada["ID"].ToString(); // Captura o ID do produto
+                string idProduto = produto["ID"].ToString();
+                string nomeAnuncio = produto["Anuncio"].ToString();
+                string etiqueta = produto.ContainsKey("Etiqueta") ? produto["Etiqueta"].ToString() : "Sem etiqueta";
+                string qtdEtiquetas = produto.ContainsKey("Qtd Etiquetas") ? produto["Qtd Etiquetas"].ToString() : "N/A";
+                string tipoProduto = produto["Composicao"].ToString(); // Kit ou Simples
 
-                    foreach (var chave in entrada.Keys)
+                // Evita adicionar o mesmo anúncio mais de uma vez, agora usando "Etiqueta" como chave única
+                string anuncioUnico = $"{nomeAnuncio}-{etiqueta}";
+                if (!anunciosExibidos.Contains(anuncioUnico))
+                {
+                    anunciosExibidos.Add(anuncioUnico);
+
+                    // 🔹 Buscar a imagem do produto
+                    string imagemUrl = await BuscarImagemProdutoTiny(idProduto);
+
+                    // 🔹 Criar o painel do produto/kit
+                    Panel kitPanel = new Panel
                     {
-                        if (entrada[chave] is JsonElement jsonElement && jsonElement.ValueKind == JsonValueKind.Array)
-                        {
-                            foreach (JsonElement item in jsonElement.EnumerateArray())
-                            {
-                                if ((item.TryGetProperty("SKU", out JsonElement skuElement) && skuElement.GetString() == codigoBipado) ||
-                                    (item.TryGetProperty("Codebar", out JsonElement codebarElement) && codebarElement.GetString() == codigoBipado))
-                                {
-                                    if (!anunciosEncontrados.Contains(nomeAnuncio))
-                                    {
-                                        anunciosEncontrados.Add(nomeAnuncio);
-                                    }
-                                    idsProdutos.Add(idProduto); // Adiciona o ID correspondente
-                                }
-                            }
-                        }
-                    }
+                        BorderStyle = BorderStyle.FixedSingle,
+                        Width = 400,
+                        Height = 130,
+                        Padding = new Padding(5)
+                    };
+
+                    // 🔹 Criar PictureBox para exibir a imagem
+                    PictureBox pictureBox = new PictureBox
+                    {
+                        Size = new Size(100, 100),
+                        Location = new Point(5, 5),
+                        SizeMode = PictureBoxSizeMode.StretchImage,
+                        ImageLocation = imagemUrl
+                    };
+
+                    // 🔹 Criar Label com informações do produto
+                    Label label = new Label
+                    {
+                        Text = $"Anúncio: {nomeAnuncio}\nEtiqueta: {etiqueta}\nQtd Etiquetas: {qtdEtiquetas}\nTipo: {tipoProduto}",
+                        Location = new Point(110, 10),
+                        Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                        ForeColor = Color.Black,
+                        AutoSize = true,
+                        MaximumSize = new Size(280, 0)
+                    };
+
+                    // 🔹 Evento de clique para abrir o formulário de confirmação
+                    kitPanel.Click += (s, e) => AbrirFormularioConfirmacao(idProduto, nomeAnuncio, imagemUrl, produtosEncontrados);
+                    pictureBox.Click += (s, e) => AbrirFormularioConfirmacao(idProduto, nomeAnuncio, imagemUrl, produtosEncontrados);
+                    label.Click += (s, e) => AbrirFormularioConfirmacao(idProduto, nomeAnuncio, imagemUrl, produtosEncontrados);
+
+                    // 🔹 Adicionar elementos ao painel do produto
+                    kitPanel.Controls.Add(pictureBox);
+                    kitPanel.Controls.Add(label);
+                    panel.Controls.Add(kitPanel);
                 }
             }
 
-            // Buscar imagens e adicionar ao formulário
-            foreach (var idProduto in idsProdutos)
-            {
-                string imagemUrl = await BuscarImagemProdutoTiny(idProduto);
-
-                Panel kitPanel = new Panel
-                {
-                    BorderStyle = BorderStyle.FixedSingle,
-                    Width = 350,
-                    Height = 120,
-                    Padding = new Padding(5)
-                };
-
-                kitPanel.Click += (s, e) => AbrirFormularioConfirmacaoKit(
-                    idProduto,
-                    anunciosEncontrados[idsProdutos.IndexOf(idProduto)],
-                    imagemUrl,
-                    dados
-                );
-
-                PictureBox pictureBox = new PictureBox
-                {
-                    Size = new Size(100, 100),
-                    Location = new Point(5, 5),
-                    SizeMode = PictureBoxSizeMode.StretchImage,
-                    ImageLocation = imagemUrl
-                };
-
-                Label label = new Label
-                {
-                    Text = anunciosEncontrados[idsProdutos.IndexOf(idProduto)],
-                    Location = new Point(110, 10),
-                    Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                    ForeColor = Color.Black,
-                    AutoSize = true,
-                    MaximumSize = new Size(200, 0)
-                };
-
-                kitPanel.Controls.Add(pictureBox);
-                kitPanel.Controls.Add(label);
-                panel.Controls.Add(kitPanel);
-            }
-
-            formKits.Controls.Add(panel);
+            // 🔹 Adicionar o painel de rolagem e exibir o formulário
+            scrollPanel.Controls.Add(panel);
+            formKits.Controls.Add(scrollPanel);
             formKits.ShowDialog();
         }
 
@@ -302,8 +338,8 @@ namespace ProgramaFull.Formulários
 
             // Buscar composição do kit
             var composicao = await BuscarComposicaoDoKit(idProduto);
-            telaCarregamento.Close(); // Fechar tela de carregamento
 
+            // #@! Produro Simples #@!
             if (composicao == null)
             {
                 telaCarregamento.Close();
@@ -525,8 +561,8 @@ namespace ProgramaFull.Formulários
                                                 "Confirmação", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                                 if (MessageBox.Show("Deseja imprimir?", "Status Impressão", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-                                { 
-                                    ImprimirEtiquetas(etiqueta, produto); 
+                                {
+                                    ImprimirEtiquetas(etiqueta, produto);
                                 }
                                 else
                                 {
@@ -546,6 +582,7 @@ namespace ProgramaFull.Formulários
 
                 return;
             }
+            // #@! Produro Simples #@!
 
             // Encontrar o dicionário correto para o kit atual
             var kitData = dados.FirstOrDefault(d =>
@@ -573,7 +610,7 @@ namespace ProgramaFull.Formulários
             if (string.IsNullOrEmpty(etiquetaId))
             {
                 telaCarregamento.Close();
-                MessageBox.Show("Erro ao capturar a etiqueta do kit.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Erro ao capturar a etiqueta do kit. Contate o Administrador", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
@@ -604,8 +641,6 @@ namespace ProgramaFull.Formulários
                     });
                 }
             }
-
-            telaCarregamento.Close(); // Fechar tela de carregamento
 
             // Criar novo formulário para exibir a composição
             Form formConfirmacao = new Form
@@ -751,8 +786,203 @@ namespace ProgramaFull.Formulários
 
             panel.Controls.Add(textBoxBipagem);
             formConfirmacao.Controls.Add(panel);
+            telaCarregamento.Close();
             formConfirmacao.ShowDialog();
         }
+
+        private async void AbrirFormularioConfirmacao(string idProduto, string nomeAnuncio, string imagemUrl, List<Dictionary<string, object>> produtosEncontrados)
+        {
+            // 🔹 Encontrar os dados do produto no JSON
+            var produtoData = produtosEncontrados.Where(p => p["ID"].ToString() == idProduto).ToList();
+
+            if (produtoData == null || produtoData.Count == 0)
+            {
+                MessageBox.Show("Erro ao encontrar os dados do produto no JSON.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // 🔹 Verificar se é um KIT ou um produto simples
+            bool isKit = produtoData.Any(p => p.ContainsKey("Composicao"));
+
+            // 🔹 Criar o formulário
+            Form formConfirmacao = new Form
+            {
+                Text = isKit ? "Confirmação do Kit" : "Confirmação do Produto",
+                StartPosition = FormStartPosition.CenterScreen,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                BackColor = Color.White
+            };
+
+            FlowLayoutPanel panel = new FlowLayoutPanel
+            {
+                AutoSize = true,
+                FlowDirection = FlowDirection.TopDown,
+                Padding = new Padding(10),
+                WrapContents = false
+            };
+
+            // 🔹 Adiciona título ao formulário
+            Label titulo = new Label
+            {
+                Text = isKit ? "Confirme os produtos do kit" : "Confirme o produto bipado",
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                AutoSize = true,
+                ForeColor = Color.Black
+            };
+            panel.Controls.Add(titulo);
+
+            // 🔹 Adiciona imagem do produto/kit
+            PictureBox pictureBox = new PictureBox
+            {
+                Size = new Size(250, 250),
+                SizeMode = PictureBoxSizeMode.Zoom,
+                ImageLocation = imagemUrl
+            };
+            panel.Controls.Add(pictureBox);
+
+            // 🔹 Criar painel para os produtos do kit ou produto simples
+            FlowLayoutPanel composicaoPanel = new FlowLayoutPanel
+            {
+                AutoSize = true,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            panel.Controls.Add(composicaoPanel);
+
+            Dictionary<string, Label> produtosLabels = new Dictionary<string, Label>();
+            Dictionary<string, int> quantidadeBipada = new Dictionary<string, int>();
+            List<ProdutoComposicao> composicao = new List<ProdutoComposicao>();
+
+            if (isKit)
+            {
+                // Buscar a composição do kit em tempo real
+                composicao = await BuscarComposicaoDoKit(idProduto);
+
+                Label labelComposicao = new Label
+                {
+                    Text = "Composição do Kit:",
+                    Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                    AutoSize = true
+                };
+                composicaoPanel.Controls.Add(labelComposicao);
+
+                foreach (var produto in composicao)
+                {
+                    quantidadeBipada[produto.SKU] = 0;
+
+                    Label produtoLabel = new Label
+                    {
+                        Text = $"{produto.Descricao} - {produto.Quantidade} Unidades",
+                        Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                        ForeColor = Color.Red,
+                        AutoSize = true
+                    };
+
+                    produtosLabels[produto.SKU] = produtoLabel;
+                    composicaoPanel.Controls.Add(produtoLabel);
+                }
+
+                // Botão para atualizar a composição em tempo real
+                Button btnAtualizar = new Button
+                {
+                    Text = "Atualizar Composição",
+                    AutoSize = true
+                };
+                btnAtualizar.Click += async (s, e) =>
+                {
+                    composicaoPanel.Controls.Clear();
+                    composicao = await BuscarComposicaoDoKit(idProduto);
+
+                    foreach (var produto in composicao)
+                    {
+                        quantidadeBipada[produto.SKU] = 0;
+
+                        Label produtoLabel = new Label
+                        {
+                            Text = $"{produto.Descricao} - {produto.Quantidade} Unidades",
+                            Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                            ForeColor = Color.Red,
+                            AutoSize = true
+                        };
+
+                        produtosLabels[produto.SKU] = produtoLabel;
+                        composicaoPanel.Controls.Add(produtoLabel);
+                    }
+                };
+                panel.Controls.Add(btnAtualizar);
+            }
+
+            // 🔹 Criar TextBox para bipagem
+            TextBox textBoxBipagem = new TextBox { Width = 200 };
+            textBoxBipagem.KeyDown += (sender, e) =>
+            {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    string bipado = textBoxBipagem.Text.Trim();
+                    bool produtoEncontrado = false;
+
+                    if (isKit)
+                    {
+                        foreach (var produto in quantidadeBipada.Keys.ToList())
+                        {
+                            if (produto == bipado)
+                            {
+                                quantidadeBipada[produto]++;
+
+                                if (quantidadeBipada[produto] >= composicao.First(p => p.SKU == produto).Quantidade)
+                                {
+                                    produtosLabels[produto].ForeColor = Color.Green;
+                                }
+
+                                produtoEncontrado = true;
+                                break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        foreach (var produto in produtoData)
+                        {
+                            if (produto["SKU"].ToString() == bipado || (produto.ContainsKey("Codebar") && produto["Codebar"].ToString() == bipado))
+                            {
+                                produtoEncontrado = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    textBoxBipagem.Clear();
+
+                    if (!produtoEncontrado)
+                    {
+                        MessageBox.Show("Produto inválido ou já bipado!", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                    else if (isKit && quantidadeBipada.All(p => p.Value >= composicao.First(c => c.SKU == p.Key).Quantidade))
+                    {
+                        MessageBox.Show("Kit confirmado com sucesso!", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        formConfirmacao.Close();
+                    }
+                }
+            };
+
+            panel.Controls.Add(textBoxBipagem);
+
+            // Botão de Cancelar
+            Button btnCancelar = new Button
+            {
+                Text = "Cancelar",
+                AutoSize = true
+            };
+            btnCancelar.Click += (s, e) => formConfirmacao.Close();
+            panel.Controls.Add(btnCancelar);
+
+            formConfirmacao.Controls.Add(panel);
+            formConfirmacao.ShowDialog();
+        }
+
 
         private void ImprimirEtiquetas(Etiqueta etiqueta, Produto produto)
         {
@@ -1066,11 +1296,9 @@ namespace ProgramaFull.Formulários
         {
             if (string.IsNullOrEmpty(Program.accessTokenTinyV3))
             {
-                // Buscar o Access Token
                 await Program.BuscarAccessTokenTinyAsync();
             }
 
-            // Verifica se o token foi obtido
             if (string.IsNullOrEmpty(Program.accessTokenTinyV3))
             {
                 MessageBox.Show("Erro ao obter o Access Token.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -1082,34 +1310,37 @@ namespace ProgramaFull.Formulários
                 using (HttpClient client = new HttpClient())
                 {
                     client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Program.accessTokenTinyV3);
-
                     string url = $"https://api.tiny.com.br/public-api/v3/produtos/{idProduto}";
 
                     HttpResponseMessage response = await client.GetAsync(url);
-
-                    // Se for erro 403, tenta buscar a chave de novo e refazer a requisição
-                    if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
-                    {
-                        MessageBox.Show("Erro 403: Acesso negado. Tentando buscar nova chave de API...", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        await Program.BuscarAccessTokenTinyAsync();
-
-                        // Refaz a requisição com a nova chave
-                        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Program.accessTokenTinyV3);
-                        response = await client.GetAsync(url);
-                    }
-
                     if (response.IsSuccessStatusCode)
                     {
                         string jsonResponse = await response.Content.ReadAsStringAsync();
-                        var produto = JsonSerializer.Deserialize<ProdutoResponse>(jsonResponse, new JsonSerializerOptions
+                        var produto = JsonSerializer.Deserialize<ProdutoTinyResponse>(jsonResponse, new JsonSerializerOptions
                         {
                             PropertyNameCaseInsensitive = true
                         });
 
-                        if (produto != null && produto.Anexos != null && produto.Anexos.Count > 0)
+                        if (produto != null)
                         {
-                            return produto.Anexos.First().Url; // Retorna a primeira imagem disponível
+                            // ✅ Se o produto tem anexos (imagens), retorna a primeira disponível
+                            if (produto.Anexos != null && produto.Anexos.Count > 0)
+                            {
+                                return produto.Anexos.First().Url;
+                            }
+
+                            // ✅ Se for um kit e não tiver imagem própria, busca a imagem do primeiro item do kit
+                            if (produto.Kit != null && produto.Kit.Count > 0)
+                            {
+                                string idProdutoKit = produto.Kit.First().Produto.ID.ToString();
+                                return await BuscarImagemProdutoTiny(idProdutoKit); // Busca a imagem do primeiro item do kit
+                            }
                         }
+                    }
+                    else if (response.StatusCode == HttpStatusCode.Forbidden)
+                    {
+                        await Program.BuscarAccessTokenTinyAsync();
+                        return await BuscarImagemProdutoTiny(idProduto);
                     }
                 }
             }
@@ -1121,30 +1352,54 @@ namespace ProgramaFull.Formulários
             return "https://i.imgur.com/tWvwe0s.png"; // Imagem padrão caso não encontre
         }
 
+        /// <summary>
+        /// Método público para atualizar a listBoxAnuncios verificando etiquetas já impressas.
+        /// </summary>
+        /// 
+
+        public void AtualizarListBoxAnuncios()
+        {
+            CarregarAnuncios();
+        }
+
         private void CarregarAnuncios()
         {
-            // Define o caminho do arquivo JSON com base no número do agendamento
             string caminhoJson = Path.Combine(@"P:\INFORMATICA\programas\FULL\KelvinV2\agendamentos", $"{Program.nomePasta}", $"{Program.nomePasta}_Embalar.json");
+            string caminhoEtiquetas = Path.Combine(@"P:\INFORMATICA\programas\FULL\KelvinV2\agendamentos", $"{Program.nomePasta}", "Etiquetas");
 
             try
             {
-                // Lê e desserializa o JSON
+                if (!File.Exists(caminhoJson))
+                {
+                    MessageBox.Show("Arquivo JSON de anúncios não encontrado.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // ✅ Lê e desserializa o JSON corretamente
                 string jsonContent = File.ReadAllText(caminhoJson);
                 var dados = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(jsonContent);
 
-                // Limpa a listBox antes de adicionar novos itens
+                // ✅ Limpa a listBox antes de adicionar novos itens
                 listBoxAnuncios.Items.Clear();
 
-                // Processa os anúncios do JSON
                 foreach (var entrada in dados)
                 {
-                    if (entrada.ContainsKey("Anuncio") && entrada.ContainsKey("Qtd Etiquetas"))
+                    if (entrada.ContainsKey("Anuncio") && entrada.ContainsKey("Qtd Etiquetas") && entrada.ContainsKey("Etiqueta"))
                     {
-                        string anuncio = entrada["Anuncio"].ToString();
-                        string qtdEtiquetas = entrada["Qtd Etiquetas"].ToString();
+                        string etiqueta = entrada["Etiqueta"].ToString(); // ✅ Agora pegando o VALOR da chave "Etiqueta"
 
-                        // Adiciona à listBox no formato desejado
-                        listBoxAnuncios.Items.Add($"{anuncio} - {qtdEtiquetas} Unidades");
+                        if (!string.IsNullOrEmpty(etiqueta))
+                        {
+                            string caminhoEtiqueta = Path.Combine(caminhoEtiquetas, $"{etiqueta}_Etiquetas.txt");
+
+                            // ✅ Verifica se a etiqueta já foi impressa
+                            if (!File.Exists(caminhoEtiqueta))
+                            {
+                                string anuncio = entrada["Anuncio"].ToString();
+                                string qtdEtiquetas = entrada["Qtd Etiquetas"].ToString();
+                                listBoxAnuncios.Items.Add($"{anuncio} - {qtdEtiquetas} Unidades");
+                            }
+                        }
                     }
                 }
             }
@@ -1152,6 +1407,91 @@ namespace ProgramaFull.Formulários
             {
                 MessageBox.Show($"Erro ao carregar os anúncios: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        } // Verifica quais anúncios estão presentes no JSON e exibe na listBox (se a etiqueta ainda não foi impressa)
+
+        public async void VerificarEtiquetasImpressas() // No momento não está sendo usado, mas vou deixar de exemplo para buscar as etiquetas de um anúncio específico que está presente na listbox
+        {
+            while (true) // Loop contínuo para verificação constante
+            {
+                try
+                {
+                    string caminhoEtiquetas = Path.Combine($@"P:\INFORMATICA\programas\FULL\KelvinV2\agendamentos\{Program.nomePasta}\Etiquetas");
+
+                    if (Directory.Exists(caminhoEtiquetas))
+                    {
+                        // Obtém a lista de arquivos de etiquetas já impressas
+                        string[] arquivosEtiquetas = Directory.GetFiles(caminhoEtiquetas, "*_Etiquetas.txt")
+                                                             .Select(Path.GetFileNameWithoutExtension) // Remove extensão para comparar só o nome
+                                                             .ToArray();
+
+                        List<string> etiquetasImpressas = arquivosEtiquetas.Select(nome => nome.Split('_')[0]).ToList();
+
+                        // Criar uma lista de índices para remoção segura
+                        List<int> indicesParaRemover = new List<int>();
+
+                        // Percorre a listBox para encontrar anúncios que já têm etiquetas impressas
+                        for (int i = 0; i < listBoxAnuncios.Items.Count; i++)
+                        {
+                            string item = listBoxAnuncios.Items[i].ToString();
+
+                            // Extrai a chave (etiqueta) correspondente ao anúncio
+                            string etiqueta = ExtrairEtiquetaDoAnuncio(item);
+
+                            if (!string.IsNullOrEmpty(etiqueta) && etiquetasImpressas.Contains(etiqueta))
+                            {
+                                indicesParaRemover.Add(i);
+                            }
+                        }
+
+                        // Remover os itens encontrados de forma segura dentro da thread da UI
+                        if (indicesParaRemover.Count > 0)
+                        {
+                            listBoxAnuncios.Invoke((MethodInvoker)delegate
+                            {
+                                for (int i = indicesParaRemover.Count - 1; i >= 0; i--)
+                                {
+                                    listBoxAnuncios.Items.RemoveAt(indicesParaRemover[i]);
+                                }
+                            });
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Erro ao verificar etiquetas impressas: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+
+                // Aguarda 5 segundos antes de repetir a verificação para evitar sobrecarga
+                await Task.Delay(5000);
+            }
+        }
+
+        private string ExtrairEtiquetaDoAnuncio(string item) // Recebe "item" (sla oq é isso, tem exemplo no método VerificarEtiquetasImpressas()) e retorna como string a etiqueta do anúncio
+        {
+            // O nome do anúncio está no formato: "Anúncio - X Unidades"
+            // Precisamos encontrar a etiqueta correspondente no JSON original
+
+            string caminhoJson = Path.Combine(@"P:\INFORMATICA\programas\FULL\KelvinV2\agendamentos", $"{Program.nomePasta}", $"{Program.nomePasta}_Embalar.json");
+
+            try
+            {
+                string jsonContent = File.ReadAllText(caminhoJson);
+                var dados = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(jsonContent);
+
+                foreach (var entrada in dados)
+                {
+                    if (entrada.ContainsKey("Etiqueta") && entrada["Anuncio"].ToString().Trim() == item.Split('-')[0].Trim())
+                    {
+                        return entrada["Etiqueta"].ToString();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Erro ao extrair etiqueta: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
+            return string.Empty;
         }
 
         public class ProdutoResponse
