@@ -1,6 +1,0 @@
-C:\FULL\output\v1.0.0.2\ProgramaFull.pdb
-C:\FULL\output\v1.0.0.2\D3DCompiler_47_cor3.dll
-C:\FULL\output\v1.0.0.2\PenImc_cor3.dll
-C:\FULL\output\v1.0.0.2\vcruntime140_cor3.dll
-C:\FULL\output\v1.0.0.2\wpfgfx_cor3.dll
-C:\FULL\output\v1.0.0.2\ProgramaFull.exe

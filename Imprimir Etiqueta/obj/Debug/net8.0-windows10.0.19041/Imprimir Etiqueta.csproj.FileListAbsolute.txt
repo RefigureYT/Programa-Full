@@ -1,8 +1,0 @@
-C:\Users\User\source\repos\Imprimir Etiqueta\obj\Debug\net8.0-windows10.0.19041\Imprimir Etiqueta.csproj.AssemblyReference.cache
-C:\Users\User\source\repos\Imprimir Etiqueta\obj\Debug\net8.0-windows10.0.19041\Imprimir_Etiqueta.Form1.resources
-C:\Users\User\source\repos\Imprimir Etiqueta\obj\Debug\net8.0-windows10.0.19041\Imprimir_Etiqueta.Properties.Resources.resources
-C:\Users\User\source\repos\Imprimir Etiqueta\obj\Debug\net8.0-windows10.0.19041\Imprimir Etiqueta.csproj.GenerateResource.cache
-C:\Users\User\source\repos\Imprimir Etiqueta\obj\Debug\net8.0-windows10.0.19041\Imprimir Etiqueta.GeneratedMSBuildEditorConfig.editorconfig
-C:\Users\User\source\repos\Imprimir Etiqueta\obj\Debug\net8.0-windows10.0.19041\Imprimir Etiqueta.AssemblyInfoInputs.cache
-C:\Users\User\source\repos\Imprimir Etiqueta\obj\Debug\net8.0-windows10.0.19041\Imprimir Etiqueta.AssemblyInfo.cs
-C:\Users\User\source\repos\Imprimir Etiqueta\obj\Debug\net8.0-windows10.0.19041\Imprimir Etiqueta.csproj.CoreCompileInputs.cache

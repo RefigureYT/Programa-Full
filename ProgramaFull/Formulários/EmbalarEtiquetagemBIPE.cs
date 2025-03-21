@@ -90,6 +90,11 @@ namespace ProgramaFull.Formulários
 
         private async void codigoProdutoTxtBox_KeyDown(object sender, KeyEventArgs e) // OK
         {
+            if(codigoProdutoTxtBox.Text.Trim() == "//#1234Atualizar")
+            {
+                CarregarAnuncios();
+                codigoProdutoTxtBox.Text = "";
+            }
             //if (codigoProdutoTxtBox.Text.Trim() == Program.modoDevCODE)
             //{
             //    ModoDEVEmbalar modoDev = new ModoDEVEmbalar(this);
@@ -244,6 +249,9 @@ namespace ProgramaFull.Formulários
             // 🔹 Criar um HashSet para evitar anúncios duplicados
             HashSet<string> anunciosExibidos = new HashSet<string>();
 
+            // 🔹 Caminho da pasta de etiquetas impressas
+            string caminhoEtiquetas = Path.Combine(@"P:\INFORMATICA\programas\FULL\KelvinV2\agendamentos", $"{Program.nomePasta}", "Etiquetas");
+
             // 🔹 Adicionar os kits e produtos ao painel
             foreach (var produto in produtosEncontrados)
             {
@@ -262,13 +270,17 @@ namespace ProgramaFull.Formulários
                     // 🔹 Buscar a imagem do produto
                     string imagemUrl = await BuscarImagemProdutoTiny(idProduto);
 
+                    // 🔹 Verifica se a etiqueta já foi impressa
+                    bool jaImpresso = !string.IsNullOrEmpty(etiqueta) && File.Exists(Path.Combine(caminhoEtiquetas, $"{etiqueta}_Etiquetas.txt"));
+
                     // 🔹 Criar o painel do produto/kit
                     Panel kitPanel = new Panel
                     {
                         BorderStyle = BorderStyle.FixedSingle,
                         Width = 400,
                         Height = 130,
-                        Padding = new Padding(5)
+                        Padding = new Padding(5),
+                        BackColor = jaImpresso ? Color.Gray : Color.White // Muda a cor do fundo se já foi impresso
                     };
 
                     // 🔹 Criar PictureBox para exibir a imagem
@@ -291,10 +303,32 @@ namespace ProgramaFull.Formulários
                         MaximumSize = new Size(280, 0)
                     };
 
-                    // 🔹 Evento de clique para abrir o formulário de confirmação
-                    kitPanel.Click += (s, e) => AbrirFormularioConfirmacao(idProduto, nomeAnuncio, imagemUrl, produtosEncontrados);
-                    pictureBox.Click += (s, e) => AbrirFormularioConfirmacao(idProduto, nomeAnuncio, imagemUrl, produtosEncontrados);
-                    label.Click += (s, e) => AbrirFormularioConfirmacao(idProduto, nomeAnuncio, imagemUrl, produtosEncontrados);
+                    // 🔹 Se a etiqueta já foi impressa, adicionar um aviso visual
+                    if (jaImpresso)
+                    {
+                        Label labelImpresso = new Label
+                        {
+                            Text = "Já foi impresso",
+                            Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                            ForeColor = Color.Red,
+                            AutoSize = true,
+                            Location = new Point(300, 100) // Posiciona no canto inferior direito
+                        };
+                        kitPanel.Controls.Add(labelImpresso);
+
+                        // Adiciona um evento de clique que exibe a mensagem
+                        kitPanel.Click += (s, e) => MessageBox.Show("Já foi impresso pow", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        pictureBox.Click += (s, e) => MessageBox.Show("Já foi impresso pow", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        label.Click += (s, e) => MessageBox.Show("Já foi impresso pow", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        labelImpresso.Click += (s, e) => MessageBox.Show("Já foi impresso pow", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    else
+                    {
+                        // 🔹 Evento de clique para abrir o formulário de confirmação
+                        kitPanel.Click += (s, e) => AbrirFormularioConfirmacao(idProduto, nomeAnuncio, imagemUrl, produtosEncontrados);
+                        pictureBox.Click += (s, e) => AbrirFormularioConfirmacao(idProduto, nomeAnuncio, imagemUrl, produtosEncontrados);
+                        label.Click += (s, e) => AbrirFormularioConfirmacao(idProduto, nomeAnuncio, imagemUrl, produtosEncontrados);
+                    }
 
                     // 🔹 Adicionar elementos ao painel do produto
                     kitPanel.Controls.Add(pictureBox);
@@ -307,487 +341,6 @@ namespace ProgramaFull.Formulários
             scrollPanel.Controls.Add(panel);
             formKits.Controls.Add(scrollPanel);
             formKits.ShowDialog();
-        }
-
-        private async void AbrirFormularioConfirmacaoKit(string idProduto, string nomeKit, string imagemUrl, List<Dictionary<string, object>> dados)
-        {
-            // Se o kit já foi confirmado, impedir a reabertura
-            if (int.TryParse(idProduto, out int idProdutoInt) && Program.kitsConfirmados.Contains(idProdutoInt))
-            {
-                MessageBox.Show("Este kit já foi confirmado anteriormente!", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            // Exibir tela de carregamento
-            Form telaCarregamento = new Form
-            {
-                Text = "Carregando...",
-                Size = new Size(300, 150),
-                StartPosition = FormStartPosition.CenterScreen,
-                FormBorderStyle = FormBorderStyle.FixedDialog,
-                ControlBox = false
-            };
-            Label labelCarregando = new Label
-            {
-                Text = "Aguarde enquanto buscamos a composição...",
-                Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.MiddleCenter
-            };
-            telaCarregamento.Controls.Add(labelCarregando);
-            telaCarregamento.Show();
-
-            // Buscar composição do kit
-            var composicao = await BuscarComposicaoDoKit(idProduto);
-
-            // #@! Produro Simples #@!
-            if (composicao == null)
-            {
-                telaCarregamento.Close();
-
-                // Encontrar os dados do produto no JSON
-                var produtoData = dados.FirstOrDefault(d =>
-                    d.ContainsKey("ID") &&
-                    d["ID"].ToString() == idProduto &&
-                    d.ContainsKey("Anuncio") &&
-                    d["Anuncio"].ToString() == nomeKit);
-
-                if (produtoData == null)
-                {
-                    MessageBox.Show("Erro ao encontrar os dados do produto simples no JSON.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-
-                // Pegar o nome da chave do array como EtiquetaId
-                // Encontrar a chave que contém a lista de produtos
-                // Encontrar a etiqueta correta associada ao produto específico do anúncio
-                string etiquetaIdSimples = produtoData.Keys.FirstOrDefault(k =>
-                    k != "Anuncio" && k != "ID" && k != "SKU" && k != "Qtd Etiquetas" &&
-                    produtoData[k] is JsonElement element && element.ValueKind == JsonValueKind.Array);
-
-                // Verifica se encontrou a etiqueta correta para o anúncio atual
-                if (!string.IsNullOrEmpty(etiquetaIdSimples) && produtoData.ContainsKey(etiquetaIdSimples))
-                {
-                    var listaDeProdutos = produtoData[etiquetaIdSimples] as JsonElement?;
-
-                    if (listaDeProdutos != null && listaDeProdutos?.ValueKind == JsonValueKind.Array)
-                    {
-                        foreach (JsonElement item in listaDeProdutos.Value.EnumerateArray())
-                        {
-                            if (item.TryGetProperty("SKU", out JsonElement produtoSkuElement) &&
-                                produtoSkuElement.GetString() == produtoData["SKU"].ToString()) // Agora confere com o SKU do anúncio
-                            {
-                                // Se o SKU do produto dentro da lista de etiqueta bate com o SKU do anúncio
-                                etiquetaIdSimples = etiquetaIdSimples;
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                if (string.IsNullOrEmpty(etiquetaIdSimples) || !produtoData.ContainsKey(etiquetaIdSimples))
-                {
-                    MessageBox.Show("Erro ao capturar a etiqueta do produto.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-
-                // Acessar a lista de produtos dentro da chave da etiqueta
-                var listaProdutos = produtoData[etiquetaIdSimples] as JsonElement?;
-                if (listaProdutos == null || listaProdutos?.ValueKind != JsonValueKind.Array || listaProdutos?.GetArrayLength() == 0)
-                {
-                    MessageBox.Show("Erro ao encontrar a lista de produtos dentro da etiqueta.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-
-                // Pegar o primeiro produto da lista
-                var produtoInfo = listaProdutos?.EnumerateArray().FirstOrDefault();
-
-                if (produtoInfo == null || !produtoInfo.Value.TryGetProperty("SKU", out JsonElement skuElement))
-                {
-                    MessageBox.Show("Erro: O produto não contém um SKU válido.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-
-                string skuProduto = skuElement.GetString();
-                string codigoBarrasProduto = produtoInfo.Value.TryGetProperty("Codebar", out JsonElement codebarElement) ? codebarElement.GetString() : "";
-
-                string caminhoEtiqueta = Path.Combine($"P:\\INFORMATICA\\programas\\FULL\\KelvinV2\\agendamentos\\{Program.nomePasta}\\Etiquetas",
-                    $"{etiquetaIdSimples}_Etiquetas.txt");
-                bool etiquetaImpressa = File.Exists(caminhoEtiqueta);
-
-                MessageBox.Show($"{etiquetaImpressa} \n\n {caminhoEtiqueta}");
-                if (etiquetaImpressa) // Se a etiqueta já foi impressa
-                { // Então fala que já foi impressa né kkkk
-                    // Aí ele tem que perguntar se o usuário quer imprimir de novo
-
-                    if (MessageBox.Show("As etiquetas deste produto já foram impressas. \n\n Deseja imprimir novamente? (Será necessário a senha de administrador)", "Status etiqueta", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
-                    {
-                        Form formSenha = new Form
-                        {
-                            Text = "Confirmação de Produto",
-                            StartPosition = FormStartPosition.CenterScreen,
-                            AutoSize = true,
-                            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                            FormBorderStyle = FormBorderStyle.FixedDialog,
-                            BackColor = Color.White
-                        };
-
-                        FlowLayoutPanel painel = new FlowLayoutPanel
-                        {
-                            AutoSize = true,
-                            FlowDirection = FlowDirection.TopDown,
-                            Padding = new Padding(10),
-                            WrapContents = false
-                        };
-
-                        Label labelSenha = new Label
-                        {
-                            Text = "Por favor insira a senha de administrador para a impressão.",
-                            Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                            AutoSize = true
-                        };
-                        painel.Controls.Add(labelSenha);
-
-                        TextBox textBoxSenha = new TextBox { Width = 200 };
-                        textBoxSenha.UseSystemPasswordChar = true;
-
-                        painel.Controls.Add(textBoxSenha);
-
-                        formSenha.Controls.Add(painel);
-                        textBoxSenha.Focus();
-
-                        textBoxSenha.KeyDown += (sender, e) =>
-                        {
-                            if (e.KeyCode == Keys.Enter)
-                            {
-                                string senhaDigitada = textBoxSenha.Text.Trim();
-
-                                if (senhaDigitada == Program.modoDevCODE) // Senha de administrador
-                                {
-                                    formSenha.Close();
-                                    MessageBox.Show("Senha correta! Etiqueta Confirmada!", "Confirmação", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                                    if (MessageBox.Show("Deseja imprimir?", "Status Impressão", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-                                    {
-                                        Etiqueta etiqueta = new Etiqueta
-                                        {
-                                            EtiquetaId = etiquetaIdSimples,
-                                            Anuncio = produtoData["Anuncio"].ToString(),
-                                            QtdEtiquetas = int.Parse(produtoData["Qtd Etiquetas"].ToString())
-                                        };
-                                        Produto produto = new Produto
-                                        {
-                                            NomeProduto = produtoData["Anuncio"].ToString(),
-                                            SKU = skuProduto,
-                                            CodigoBarras = codigoBarrasProduto
-                                        };
-
-                                        MessageBox.Show("Etiqueta Confirmada!\n\nEtiqueta: " + etiqueta.EtiquetaId + "\nAnúncio: " + etiqueta.Anuncio + "\nSKU: " + produto.SKU + "\nQuantidade: " + etiqueta.QtdEtiquetas, "Confirmação", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                                        //ImprimirEtiquetas(etiqueta, produto);
-                                    }
-                                    else
-                                    {
-                                        MessageBox.Show("Não será impresso ;-)", "Status Impressão", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                                    }
-                                }
-                                else
-                                {
-                                    MessageBox.Show("Senha incorreta!", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                    textBoxSenha.Clear();
-
-                                }
-                            };
-                        };
-                        formSenha.ShowDialog();
-                    }
-                }
-                else if (MessageBox.Show($"Deseja imprimir as etiquetas do anúncio \"{nomeKit}\"?", "Produto Simples", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-                {
-                    Form formBipagem = new Form
-                    {
-                        Text = "Confirmação de Produto",
-                        StartPosition = FormStartPosition.CenterScreen,
-                        AutoSize = true,
-                        AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                        FormBorderStyle = FormBorderStyle.FixedDialog,
-                        BackColor = Color.White
-                    };
-
-                    FlowLayoutPanel painel = new FlowLayoutPanel
-                    {
-                        AutoSize = true,
-                        FlowDirection = FlowDirection.TopDown,
-                        Padding = new Padding(10),
-                        WrapContents = false
-                    };
-
-                    Label labelInstrucao = new Label
-                    {
-                        Text = "Bipe o código de barras ou SKU para confirmar a impressão.",
-                        Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                        AutoSize = true
-                    };
-                    painel.Controls.Add(labelInstrucao);
-
-                    TextBox textBoxBipagemSimples = new TextBox { Width = 200 };
-                    painel.Controls.Add(textBoxBipagemSimples);
-
-                    formBipagem.Controls.Add(painel);
-                    textBoxBipagemSimples.Focus();
-
-                    textBoxBipagemSimples.KeyDown += (sender, e) =>
-                    {
-                        if (e.KeyCode == Keys.Enter)
-                        {
-                            string bipado = textBoxBipagemSimples.Text.Trim();
-
-                            if (bipado == skuProduto || (!string.IsNullOrEmpty(codigoBarrasProduto) && bipado == codigoBarrasProduto))
-                            {
-                                Etiqueta etiqueta = new Etiqueta
-                                {
-                                    EtiquetaId = etiquetaIdSimples, // Agora a etiqueta é o nome do array!
-                                    Anuncio = produtoData["Anuncio"].ToString(),
-                                    QtdEtiquetas = int.Parse(produtoData["Qtd Etiquetas"].ToString())
-                                };
-
-                                Produto produto = new Produto
-                                {
-                                    NomeProduto = produtoData["Anuncio"].ToString(),
-                                    SKU = skuProduto,
-                                    CodigoBarras = codigoBarrasProduto
-                                };
-
-                                formBipagem.Close();
-
-                                MessageBox.Show($"Etiqueta Confirmada!\n\nEtiqueta: {etiqueta.EtiquetaId}\nAnúncio: {etiqueta.Anuncio}\nSKU: {produto.SKU}\nQuantidade: {etiqueta.QtdEtiquetas}",
-                                                "Confirmação", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                                if (MessageBox.Show("Deseja imprimir?", "Status Impressão", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-                                {
-                                    ImprimirEtiquetas(etiqueta, produto);
-                                }
-                                else
-                                {
-                                    MessageBox.Show("Não será impresso ;-)", "Status Impressão", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                                }
-                            }
-                            else
-                            {
-                                MessageBox.Show("Código de barras ou SKU incorreto!", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                textBoxBipagemSimples.Clear();
-                            }
-                        }
-                    };
-
-                    formBipagem.ShowDialog();
-                }
-
-                return;
-            }
-            // #@! Produro Simples #@!
-
-            // Encontrar o dicionário correto para o kit atual
-            var kitData = dados.FirstOrDefault(d =>
-                d.ContainsKey("ID") &&
-                d["ID"].ToString() == idProduto &&
-                d.ContainsKey("Anuncio") &&
-                d["Anuncio"].ToString() == nomeKit);
-
-            if (kitData == null)
-            {
-                telaCarregamento.Close();
-                MessageBox.Show("Erro ao encontrar dados do kit no JSON.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            // Obtendo a EtiquetaId dinamicamente do JSON (a chave que representa a etiqueta)
-            string etiquetaId = kitData.Keys
-                .FirstOrDefault(k =>
-                    k != "Anuncio" &&
-                    k != "ID" &&
-                    k != "Qtd Etiquetas" &&
-                    kitData[k] is JsonElement element &&
-                    element.ValueKind == JsonValueKind.Array);
-
-            if (string.IsNullOrEmpty(etiquetaId))
-            {
-                telaCarregamento.Close();
-                MessageBox.Show("Erro ao capturar a etiqueta do kit. Contate o Administrador", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            // Criando a Etiqueta com os valores corretos
-            Etiqueta etiqueta = new Etiqueta
-            {
-                EtiquetaId = etiquetaId,
-                Anuncio = kitData["Anuncio"].ToString(),
-                QtdEtiquetas = int.Parse(kitData["Qtd Etiquetas"].ToString())
-            };
-
-            // Lista de produtos com seus detalhes (ID, SKU, descrição, GTIN)
-            List<ProdutoComposicao> composicaoDetalhada = new List<ProdutoComposicao>();
-
-            // Para cada produto na composição, buscar mais detalhes
-            foreach (var produto in composicao)
-            {
-                var detalhesProduto = await BuscarDetalhesProdutoTiny(produto.ID.ToString());
-                if (detalhesProduto != null)
-                {
-                    composicaoDetalhada.Add(new ProdutoComposicao
-                    {
-                        ID = detalhesProduto.ID,
-                        SKU = detalhesProduto.SKU,
-                        Descricao = detalhesProduto.Descricao,
-                        CodigoBarras = detalhesProduto.CodigoBarras, // Código de barras
-                        Quantidade = produto.Quantidade
-                    });
-                }
-            }
-
-            // Criar novo formulário para exibir a composição
-            Form formConfirmacao = new Form
-            {
-                Text = "Confirmação do Kit",
-                StartPosition = FormStartPosition.CenterScreen,
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                FormBorderStyle = FormBorderStyle.FixedDialog
-            };
-
-            FlowLayoutPanel panel = new FlowLayoutPanel
-            {
-                AutoSize = true,
-                FlowDirection = FlowDirection.TopDown,
-                Padding = new Padding(10),
-                WrapContents = false
-            };
-
-            // Adiciona título
-            Label titulo = new Label
-            {
-                Text = "Por favor, confirme a composição",
-                Font = new Font("Segoe UI", 14, FontStyle.Bold),
-                AutoSize = true
-            };
-            panel.Controls.Add(titulo);
-
-            // Adiciona imagem do kit
-            PictureBox pictureBox = new PictureBox
-            {
-                Size = new Size(250, 250),
-                SizeMode = PictureBoxSizeMode.Zoom,
-                ImageLocation = imagemUrl
-            };
-            panel.Controls.Add(pictureBox);
-
-            // Lista os produtos do kit
-            Label labelComposicao = new Label
-            {
-                Text = "Composição do Kit:",
-                Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                AutoSize = true
-            };
-            panel.Controls.Add(labelComposicao);
-
-            // Criar lista para armazenar os SKUs e GTINs que precisam ser bipados
-            Dictionary<string, int> quantidadeBipada = new Dictionary<string, int>();
-
-            foreach (var produto in composicaoDetalhada)
-            {
-                quantidadeBipada[produto.SKU] = 0; // Inicia com 0 bipagens
-
-                Label produtoLabel = new Label
-                {
-                    Text = $"{produto.Descricao} - {produto.Quantidade} Unidades",
-                    Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                    ForeColor = Color.Red, // Começa vermelho
-                    AutoSize = true
-                };
-
-                panel.Controls.Add(produtoLabel);
-            }
-
-            // Campo de entrada para bipar os produtos
-            TextBox textBoxBipagem = new TextBox { Width = 200 };
-            textBoxBipagem.KeyDown += (sender, e) =>
-            {
-                if (e.KeyCode == Keys.Enter)
-                {
-                    string bipado = textBoxBipagem.Text.Trim();
-                    bool produtoEncontrado = false;
-
-                    foreach (var produto in composicaoDetalhada)
-                    {
-                        if (produto.SKU == bipado || produto.CodigoBarras == bipado)
-                        {
-                            quantidadeBipada[produto.SKU]++;
-
-                            // Atualiza a cor do label correspondente ao produto bipado
-                            foreach (Control control in panel.Controls)
-                            {
-                                if (control is Label label && label.Text.Contains(produto.Descricao))
-                                {
-                                    if (quantidadeBipada[produto.SKU] >= produto.Quantidade)
-                                    {
-                                        label.ForeColor = Color.Green; // Quando atinge a quantidade necessária, fica verde
-                                    }
-                                }
-                            }
-
-                            produtoEncontrado = true;
-                            break;
-                        }
-                    }
-
-                    textBoxBipagem.Clear();
-
-                    if (!produtoEncontrado)
-                    {
-                        MessageBox.Show("Este produto não faz parte da composição ou já foi bipado!", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    }
-                    else if (composicaoDetalhada.All(p => quantidadeBipada.ContainsKey(p.SKU) && quantidadeBipada[p.SKU] >= p.Quantidade))
-                    {
-                        if (int.TryParse(idProduto, out int idProdutoInt))
-                        {
-                            Program.kitsConfirmados.Add(idProdutoInt);
-                        }
-                        else
-                        {
-                            MessageBox.Show($"Aviso: Não foi possível registrar o kit como confirmado. ID inválido: {idProduto}",
-                                          "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        }
-                        if (MessageBox.Show("Kit confirmado com sucesso!\nDeseja imprimir as etiquetas agora?", "Sucesso", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-                        {
-                            // Pegando o primeiro produto válido para impressão
-                            var produto = composicaoDetalhada.FirstOrDefault();
-
-                            if (produto != null)
-                            {
-                                Produto produtoEtiqueta = new Produto
-                                {
-                                    NomeProduto = produto.Descricao,
-                                    SKU = produto.SKU,
-                                    CodigoBarras = produto.CodigoBarras,
-                                    Quantidade = produto.Quantidade
-                                };
-
-                                ImprimirEtiquetas(etiqueta, produtoEtiqueta);
-                            }
-                            else
-                            {
-                                MessageBox.Show("Nenhum produto encontrado para impressão da etiqueta.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            }
-                        }
-                        else
-                        {
-                            MessageBox.Show("Não será impresso ;-)", "Status Impressão", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
-                    }
-                }
-            };
-
-            panel.Controls.Add(textBoxBipagem);
-            formConfirmacao.Controls.Add(panel);
-            telaCarregamento.Close();
-            formConfirmacao.ShowDialog();
         }
 
         private async void AbrirFormularioConfirmacao(string idProduto, string nomeAnuncio, string imagemUrl, List<Dictionary<string, object>> produtosEncontrados)
@@ -859,7 +412,16 @@ namespace ProgramaFull.Formulários
             if (isKit)
             {
                 // Buscar a composição do kit em tempo real
-                composicao = await BuscarComposicaoDoKit(idProduto);
+                composicao = await BuscarComposicaoDoKit(idProduto) ?? new List<ProdutoComposicao>();
+
+                if (composicao.Count == 0)
+                {
+                    //MessageBox.Show("Erro ao buscar a composição do kit. Tente novamente.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    //return;
+                    // Se for um produto simples, impedir a execução de código que busca composição
+                    ExibirFormularioProdutoSimples(produtoData.First(), imagemUrl);
+                    return;
+                }
 
                 Label labelComposicao = new Label
                 {
@@ -983,6 +545,89 @@ namespace ProgramaFull.Formulários
             formConfirmacao.ShowDialog();
         }
 
+        private void ExibirFormularioProdutoSimples(Dictionary<string, object> produto, string imagemUrl)
+        {
+            Form formProdutoSimples = new Form
+            {
+                Text = "Confirmação do Produto",
+                StartPosition = FormStartPosition.CenterScreen,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                BackColor = Color.White
+            };
+
+            FlowLayoutPanel panel = new FlowLayoutPanel
+            {
+                AutoSize = true,
+                FlowDirection = FlowDirection.TopDown,
+                Padding = new Padding(10),
+                WrapContents = false
+            };
+
+            // 🔹 Adicionar título
+            Label titulo = new Label
+            {
+                Text = "Confirme o produto bipado:",
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                AutoSize = true,
+                ForeColor = Color.Black
+            };
+            panel.Controls.Add(titulo);
+
+            // 🔹 Adicionar imagem do produto
+            PictureBox pictureBox = new PictureBox
+            {
+                Size = new Size(250, 250),
+                SizeMode = PictureBoxSizeMode.Zoom,
+                ImageLocation = imagemUrl
+            };
+            panel.Controls.Add(pictureBox);
+
+            // 🔹 Exibir informações do produto
+            Label produtoInfo = new Label
+            {
+                Text = $"Anúncio: {produto["Anuncio"]}\nEtiqueta: {produto["Etiqueta"]}\nQtd Etiquetas: {produto["Qtd Etiquetas"]}",
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = Color.Black,
+                AutoSize = true
+            };
+            panel.Controls.Add(produtoInfo);
+
+            // 🔹 Criar TextBox para bipagem do produto
+            TextBox textBoxBipagem = new TextBox { Width = 200 };
+            panel.Controls.Add(textBoxBipagem);
+
+            textBoxBipagem.KeyDown += (sender, e) =>
+            {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    string bipado = textBoxBipagem.Text.Trim();
+                    if (bipado == produto["SKU"].ToString() || (produto.ContainsKey("Codebar") && produto["Codebar"].ToString() == bipado))
+                    {
+                        MessageBox.Show("Produto confirmado!", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        formProdutoSimples.Close();
+                    }
+                    else
+                    {
+                        MessageBox.Show("Código de barras ou SKU incorreto!", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        textBoxBipagem.Clear();
+                    }
+                }
+            };
+
+            // 🔹 Botão de cancelar
+            Button btnCancelar = new Button
+            {
+                Text = "Cancelar",
+                AutoSize = true
+            };
+            btnCancelar.Click += (s, e) => formProdutoSimples.Close();
+            panel.Controls.Add(btnCancelar);
+
+            formProdutoSimples.Controls.Add(panel);
+            formProdutoSimples.ShowDialog();
+        }
 
         private void ImprimirEtiquetas(Etiqueta etiqueta, Produto produto)
         {
@@ -1357,11 +1002,6 @@ namespace ProgramaFull.Formulários
         /// </summary>
         /// 
 
-        public void AtualizarListBoxAnuncios()
-        {
-            CarregarAnuncios();
-        }
-
         private void CarregarAnuncios()
         {
             string caminhoJson = Path.Combine(@"P:\INFORMATICA\programas\FULL\KelvinV2\agendamentos", $"{Program.nomePasta}", $"{Program.nomePasta}_Embalar.json");
@@ -1376,9 +1016,31 @@ namespace ProgramaFull.Formulários
                 }
 
                 // ✅ Lê e desserializa o JSON corretamente
-                string jsonContent = File.ReadAllText(caminhoJson);
-                var dados = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(jsonContent);
+                string jsonContent = File.ReadAllText(caminhoJson, Encoding.UTF8);
+                var dados = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(jsonContent, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true, // Ignora diferenças de maiúsculas e minúsculas nas chaves
+                    AllowTrailingCommas = true // Permite JSON mal formatado com vírgulas extras
+                });
 
+                if (dados == null || dados.Count == 0)
+                {
+                    MessageBox.Show("O arquivo JSON está vazio ou corrompido.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // ✅ Obtém a lista de etiquetas já impressas
+                List<string> etiquetasImpressas = new List<string>();
+
+                if (Directory.Exists(caminhoEtiquetas))
+                {
+                    string[] arquivosEtiquetas = Directory.GetFiles(caminhoEtiquetas, "*_Etiquetas.txt")
+                                                         .Select(Path.GetFileNameWithoutExtension) // Remove extensão para comparar só o nome
+                                                         .ToArray();
+
+                    etiquetasImpressas = arquivosEtiquetas.Select(nome => nome.Split('_')[0]).ToList();
+                }
+                
                 // ✅ Limpa a listBox antes de adicionar novos itens
                 listBoxAnuncios.Items.Clear();
 
@@ -1386,19 +1048,13 @@ namespace ProgramaFull.Formulários
                 {
                     if (entrada.ContainsKey("Anuncio") && entrada.ContainsKey("Qtd Etiquetas") && entrada.ContainsKey("Etiqueta"))
                     {
-                        string etiqueta = entrada["Etiqueta"].ToString(); // ✅ Agora pegando o VALOR da chave "Etiqueta"
+                        string etiqueta = entrada["Etiqueta"].ToString().Trim(); // Remove espaços extras
 
-                        if (!string.IsNullOrEmpty(etiqueta))
+                        if (!string.IsNullOrEmpty(etiqueta) && !etiquetasImpressas.Contains(etiqueta))
                         {
-                            string caminhoEtiqueta = Path.Combine(caminhoEtiquetas, $"{etiqueta}_Etiquetas.txt");
-
-                            // ✅ Verifica se a etiqueta já foi impressa
-                            if (!File.Exists(caminhoEtiqueta))
-                            {
-                                string anuncio = entrada["Anuncio"].ToString();
-                                string qtdEtiquetas = entrada["Qtd Etiquetas"].ToString();
-                                listBoxAnuncios.Items.Add($"{anuncio} - {qtdEtiquetas} Unidades");
-                            }
+                            string anuncio = entrada["Anuncio"].ToString().Trim();
+                            string qtdEtiquetas = entrada["Qtd Etiquetas"].ToString().Trim();
+                            listBoxAnuncios.Items.Add($"{anuncio} - {qtdEtiquetas} Unidades");
                         }
                     }
                 }
@@ -1407,8 +1063,8 @@ namespace ProgramaFull.Formulários
             {
                 MessageBox.Show($"Erro ao carregar os anúncios: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-        } // Verifica quais anúncios estão presentes no JSON e exibe na listBox (se a etiqueta ainda não foi impressa)
-
+        }
+ 
         public async void VerificarEtiquetasImpressas() // No momento não está sendo usado, mas vou deixar de exemplo para buscar as etiquetas de um anúncio específico que está presente na listbox
         {
             while (true) // Loop contínuo para verificação constante
