@@ -88,9 +88,15 @@ namespace ProgramaFull.Formulários
             }
         } // OK
 
+        private void finalizarBtn_Click(object sender, EventArgs e)
+        {
+            CarregarAnuncios();
+            VerificarFinalizacaoAgendamento();
+        }
         private async void codigoProdutoTxtBox_KeyDown(object sender, KeyEventArgs e) // OK
         {
-            if(codigoProdutoTxtBox.Text.Trim() == "//#1234Atualizar")
+
+            if (codigoProdutoTxtBox.Text.Trim() == "//#1234Atualizar")
             {
                 CarregarAnuncios();
                 codigoProdutoTxtBox.Text = "";
@@ -324,10 +330,20 @@ namespace ProgramaFull.Formulários
                     }
                     else
                     {
+
+                        // Cria cópias locais das variáveis dentro do loop para evitar captura errada
+                        string idProdutoLocal = idProduto;
+                        string nomeAnuncioLocal = nomeAnuncio;
+                        string imagemUrlLocal = imagemUrl;
+                        string etiquetaLocal = etiqueta;
+
+                        // Cria cópia específica para cada produto no evento de clique
+                        Dictionary<string, object> produtoSelecionado = new Dictionary<string, object>(produto);
+
                         // 🔹 Evento de clique para abrir o formulário de confirmação
-                        kitPanel.Click += (s, e) => AbrirFormularioConfirmacao(idProduto, nomeAnuncio, imagemUrl, produtosEncontrados);
-                        pictureBox.Click += (s, e) => AbrirFormularioConfirmacao(idProduto, nomeAnuncio, imagemUrl, produtosEncontrados);
-                        label.Click += (s, e) => AbrirFormularioConfirmacao(idProduto, nomeAnuncio, imagemUrl, produtosEncontrados);
+                        kitPanel.Click += (s, e) => AbrirFormularioConfirmacao(idProdutoLocal, nomeAnuncioLocal, imagemUrlLocal, new List<Dictionary<string, object>> { produtoSelecionado }, formKits);
+                        pictureBox.Click += (s, e) => AbrirFormularioConfirmacao(idProdutoLocal, nomeAnuncioLocal, imagemUrlLocal, new List<Dictionary<string, object>> { produtoSelecionado }, formKits);
+                        label.Click += (s, e) => AbrirFormularioConfirmacao(idProdutoLocal, nomeAnuncioLocal, imagemUrlLocal, new List<Dictionary<string, object>> { produtoSelecionado }, formKits);
                     }
 
                     // 🔹 Adicionar elementos ao painel do produto
@@ -343,7 +359,7 @@ namespace ProgramaFull.Formulários
             formKits.ShowDialog();
         }
 
-        private async void AbrirFormularioConfirmacao(string idProduto, string nomeAnuncio, string imagemUrl, List<Dictionary<string, object>> produtosEncontrados)
+        private async void AbrirFormularioConfirmacao(string idProduto, string nomeAnuncio, string imagemUrl, List<Dictionary<string, object>> produtosEncontrados, Form formKits)
         {
             // 🔹 Encontrar os dados do produto no JSON
             var produtoData = produtosEncontrados.Where(p => p["ID"].ToString() == idProduto).ToList();
@@ -419,7 +435,7 @@ namespace ProgramaFull.Formulários
                     //MessageBox.Show("Erro ao buscar a composição do kit. Tente novamente.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     //return;
                     // Se for um produto simples, impedir a execução de código que busca composição
-                    ExibirFormularioProdutoSimples(produtoData.First(), imagemUrl);
+                    ExibirFormularioProdutoSimples(produtoData.First(), imagemUrl, formKits);
                     return;
                 }
 
@@ -525,7 +541,34 @@ namespace ProgramaFull.Formulários
                     else if (isKit && quantidadeBipada.All(p => p.Value >= composicao.First(c => c.SKU == p.Key).Quantidade))
                     {
                         MessageBox.Show("Kit confirmado com sucesso!", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                        // Criar o objeto da etiqueta com os detalhes do kit
+                        Etiqueta etiquetaObj = new Etiqueta
+                        {
+                            EtiquetaId = produtoData.First()["Etiqueta"].ToString(),
+                            Anuncio = produtoData.First()["Anuncio"].ToString(),
+                            QtdEtiquetas = int.Parse(produtoData.First()["Qtd Etiquetas"].ToString())
+                        };
+
+                        // Criar objeto do produto baseado no kit
+                        Produto produtoObj = new Produto
+                        {
+                            SKU = produtoData.First()["SKU"].ToString(),
+                            NomeProduto = produtoData.First()["Anuncio"].ToString(),
+                        };
+
+                        // Caminho do JSON
+                        string caminhoJson = Path.Combine(@"P:\INFORMATICA\programas\FULL\KelvinV2\agendamentos", Program.nomePasta.ToString(), $"{Program.nomePasta}_Embalar.json");
+
+                        // Gerar arquivo de etiquetas para o kit
+                        string etiquetasZPL = GerarEtiquetas(etiquetaObj, produtoObj, caminhoJson);
+
+                        // Exibir confirmação
+                        MessageBox.Show("Arquivo de etiquetas do kit gerado com sucesso!", "Etiqueta", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                        CarregarAnuncios();
                         formConfirmacao.Close();
+                        formKits.Close();
                     }
                 }
             };
@@ -545,7 +588,7 @@ namespace ProgramaFull.Formulários
             formConfirmacao.ShowDialog();
         }
 
-        private void ExibirFormularioProdutoSimples(Dictionary<string, object> produto, string imagemUrl)
+        private void ExibirFormularioProdutoSimples(Dictionary<string, object> produto, string imagemUrl, Form formKits)
         {
             Form formProdutoSimples = new Form
             {
@@ -607,6 +650,34 @@ namespace ProgramaFull.Formulários
                     {
                         MessageBox.Show("Produto confirmado!", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         formProdutoSimples.Close();
+
+                        // Monta os dados da etiqueta e do produto
+                        Etiqueta etiquetaObj = new Etiqueta
+                        {
+                            EtiquetaId = produto["Etiqueta"].ToString(),
+                            Anuncio = produto["Anuncio"].ToString(),
+                            QtdEtiquetas = int.Parse(produto["Qtd Etiquetas"].ToString())
+                        };
+
+                        Produto produtoObj = new Produto
+                        {
+                            SKU = produto["SKU"].ToString(),
+                            NomeProduto = produto["Anuncio"].ToString(),
+                            CodigoBarras = produto.ContainsKey("Codebar") ? produto["Codebar"].ToString() : ""
+                        };
+
+                        // Caminho do JSON atual
+                        string caminhoJson = Path.Combine(@"P:\INFORMATICA\programas\FULL\KelvinV2\agendamentos", Program.nomePasta.ToString(), $"{Program.nomePasta}_Embalar.json");
+
+                        // Gera o arquivo de etiquetas
+                        string etiquetasZPL = GerarEtiquetas(etiquetaObj, produtoObj, caminhoJson);
+
+                        // (Opcional) Exibir confirmação ou log
+                        MessageBox.Show("Arquivo de etiquetas gerado com sucesso!", "Etiqueta", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                        CarregarAnuncios();
+                        formProdutoSimples.Close();
+                        formKits.Close();
                     }
                     else
                     {
@@ -1040,7 +1111,7 @@ namespace ProgramaFull.Formulários
 
                     etiquetasImpressas = arquivosEtiquetas.Select(nome => nome.Split('_')[0]).ToList();
                 }
-                
+
                 // ✅ Limpa a listBox antes de adicionar novos itens
                 listBoxAnuncios.Items.Clear();
 
@@ -1064,7 +1135,7 @@ namespace ProgramaFull.Formulários
                 MessageBox.Show($"Erro ao carregar os anúncios: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
- 
+
         public async void VerificarEtiquetasImpressas() // No momento não está sendo usado, mas vou deixar de exemplo para buscar as etiquetas de um anúncio específico que está presente na listbox
         {
             while (true) // Loop contínuo para verificação constante
@@ -1148,6 +1219,89 @@ namespace ProgramaFull.Formulários
             }
 
             return string.Empty;
+        }
+
+        private void VerificarFinalizacaoAgendamento()
+        {
+            // Verifica se a listBox está vazia
+            if (listBoxAnuncios.Items.Count == 0)
+            {
+                DialogResult result = MessageBox.Show(
+                    "Todos os anúncios foram confirmados e impressos a etiqueta!\nGostaria de finalizar o agendamento?",
+                    "Finalizar Agendamento",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question
+                );
+
+                if (result == DialogResult.Yes)
+                {
+                    try
+                    {
+                        // Caminho do arquivo info.json
+                        string caminhoJson = Path.Combine(@"P:\INFORMATICA\programas\FULL\KelvinV2\agendamentos", Program.nomePasta.ToString(), "info.json");
+
+                        if (!File.Exists(caminhoJson))
+                        {
+                            MessageBox.Show("Arquivo info.json não encontrado!", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
+
+                        // Ler e desserializar o JSON
+                        string jsonContent = File.ReadAllText(caminhoJson, Encoding.UTF8);
+                        var dados = JsonSerializer.Deserialize<Dictionary<string, List<Dictionary<string, object>>>>(jsonContent, new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        });
+
+                        // Verifica se o JSON contém a chave "Embalar"
+                        if (dados != null && dados.ContainsKey("Embalar") && dados["Embalar"] != null)
+                        {
+                            bool atualizado = false;
+
+                            // Percorre a lista "Embalar" e altera "Concluído" para `true`
+                            foreach (var item in dados["Embalar"])
+                            {
+                                if (item.ContainsKey("Concluído") && item["Concluído"] is JsonElement jsonElement && jsonElement.ValueKind == JsonValueKind.False)
+                                {
+                                    item["Concluído"] = true;
+                                    atualizado = true;
+                                }
+                                else if (item.ContainsKey("Concluído") && item["Concluído"] is bool concluido && !concluido)
+                                {
+                                    item["Concluído"] = true;
+                                    atualizado = true;
+                                }
+                            }
+
+                            if (atualizado)
+                            {
+                                // Serializa de volta para JSON e salva no arquivo
+                                string novoJson = JsonSerializer.Serialize(dados, new JsonSerializerOptions { WriteIndented = true });
+                                File.WriteAllText(caminhoJson, novoJson);
+
+                                MessageBox.Show("Agendamento finalizado com sucesso!", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                                // Fecha o formulário
+                                this.Close();
+                                VerAgendamentos verAgendamentos = new VerAgendamentos();
+                                verAgendamentos.Show();
+                            }
+                            else
+                            {
+                                MessageBox.Show("Nenhuma alteração foi necessária, pois todos já estavam finalizados.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            }
+                        }
+                        else
+                        {
+                            MessageBox.Show("A chave 'Embalar' não foi encontrada no arquivo info.json!", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Erro ao finalizar o agendamento: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
         }
 
         public class ProdutoResponse

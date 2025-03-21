@@ -41,6 +41,7 @@
             labelTutorial = new Label();
             listBoxAnuncios = new ListBox();
             JauPesca = new PictureBox();
+            finalizarBtn = new Button();
             panel3.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)JauPesca).BeginInit();
             SuspendLayout();
@@ -175,12 +176,23 @@
             JauPesca.TabIndex = 79;
             JauPesca.TabStop = false;
             // 
+            // finalizarBtn
+            // 
+            finalizarBtn.Location = new Point(409, 132);
+            finalizarBtn.Name = "finalizarBtn";
+            finalizarBtn.Size = new Size(75, 23);
+            finalizarBtn.TabIndex = 80;
+            finalizarBtn.Text = "Finalizar";
+            finalizarBtn.UseVisualStyleBackColor = true;
+            finalizarBtn.Click += finalizarBtn_Click;
+            // 
             // EmbalarEtiquetagemBIPE
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             AutoValidate = AutoValidate.EnableAllowFocusChange;
             ClientSize = new Size(500, 600);
+            Controls.Add(finalizarBtn);
             Controls.Add(JauPesca);
             Controls.Add(listBoxAnuncios);
             Controls.Add(labelTutorial);
@@ -214,5 +226,6 @@
         private Label labelTutorial;
         private ListBox listBoxAnuncios;
         private PictureBox JauPesca;
+        private Button finalizarBtn;
     }
 }
