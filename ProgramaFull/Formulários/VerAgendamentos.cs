@@ -55,8 +55,8 @@ namespace ProgramaFull.Formulários
                 foreach (var pasta in pastas)
                 {
                     string jsonPath = Path.Combine(pasta, "info.json");
-                    string statusStatus = "Pré Conferência"; // Valor padrão inicial
-                    string statusEmpresa = "Indefinido"; // Valor padrão para empresa
+                    string statusStatus = "Pré Conferência"; // Status padrão inicial
+                    string statusEmpresa = "Indefinido"; // Empresa padrão
 
                     if (File.Exists(jsonPath))
                     {
@@ -66,7 +66,8 @@ namespace ProgramaFull.Formulários
                             using JsonDocument document = JsonDocument.Parse(jsonContent);
                             JsonElement root = document.RootElement;
 
-                            string[] etapas = { "Expedição", "Encaixotar", "Embalar", "Pré Conferência" };
+                            // Ordem correta das etapas
+                            string[] etapas = { "Pré Conferência", "Embalar", "Expedição" };
 
                             foreach (string etapa in etapas)
                             {
@@ -81,40 +82,40 @@ namespace ProgramaFull.Formulários
                                         statusEmpresa = empresa.GetString();
                                     }
 
-                                    if (primeiroItem.TryGetProperty("Concluído", out JsonElement concluidoElement))
+                                    bool todasConcluidas = etapaArray.EnumerateArray().All(item =>
+                                        item.TryGetProperty("Concluído", out JsonElement concluidoElement) &&
+                                        (
+                                            concluidoElement.ValueKind == JsonValueKind.True ||
+                                            (concluidoElement.ValueKind == JsonValueKind.String &&
+                                             concluidoElement.GetString()?.Equals("true", StringComparison.OrdinalIgnoreCase) == true)
+                                        )
+                                    );
+
+                                    if (!todasConcluidas)
                                     {
-                                        bool concluidoValor = concluidoElement.ValueKind switch
-                                        {
-                                            JsonValueKind.True => true,
-                                            JsonValueKind.False => false,
-                                            JsonValueKind.String => concluidoElement.GetString()?.Equals("true", StringComparison.OrdinalIgnoreCase) ?? false,
-                                            _ => false
-                                        };
-
-                                        bool todasConcluidas = etapaArray.EnumerateArray().All(item =>
-                                        {
-                                            if (item.TryGetProperty("Concluído", out JsonElement concluidoElement))
-                                            {
-                                                return concluidoElement.ValueKind == JsonValueKind.True ||
-                                                       (concluidoElement.ValueKind == JsonValueKind.String && concluidoElement.GetString()?.Equals("true", StringComparison.OrdinalIgnoreCase) == true);
-                                            }
-                                            return false; // Se não existir a chave "Concluído", considera como não concluído
-                                        });
-
-                                        if (todasConcluidas && etapa != "Concluído")
-                                        {
-                                            Dictionary<string, string> proximaEtapa = new Dictionary<string, string>
-                                            {
-                                                { "Pré Conferência", "Embalar" },
-                                                { "Embalar", "Encaixotar" },
-                                                { "Encaixotar", "Expedição" },
-                                                { "Expedição", "Concluído" }
-                                            };
-                                            statusStatus = proximaEtapa.ContainsKey(etapa) ? proximaEtapa[etapa] : etapa;
-                                        }
-
+                                        statusStatus = etapa;
+                                        break; // Sai do loop assim que encontrar a etapa incompleta
                                     }
                                 }
+                                else
+                                {
+                                    statusStatus = etapa;
+                                    break;
+                                }
+                            }
+
+                            // Se a última etapa ("Expedição") estiver totalmente concluída, status será "Concluído"
+                            if (statusStatus == "Expedição" &&
+                                root.TryGetProperty("Expedição", out JsonElement expedicaoArray) &&
+                                expedicaoArray.ValueKind == JsonValueKind.Array &&
+                                expedicaoArray.EnumerateArray().All(item =>
+                                    item.TryGetProperty("Concluído", out JsonElement concluidoElement) &&
+                                    (concluidoElement.ValueKind == JsonValueKind.True ||
+                                     (concluidoElement.ValueKind == JsonValueKind.String &&
+                                      concluidoElement.GetString()?.Equals("true", StringComparison.OrdinalIgnoreCase) == true))
+                                ))
+                            {
+                                statusStatus = "Concluído";
                             }
                         }
                         catch (Exception)
@@ -129,6 +130,7 @@ namespace ProgramaFull.Formulários
                         continue;
                     }
 
+                    // Criando os elementos visuais
                     GroupBox groupBoxClone = new GroupBox()
                     {
                         Width = caixaAg.Width - 20,
@@ -145,7 +147,7 @@ namespace ProgramaFull.Formulários
 
                     Label statusValue = new Label
                     {
-                        Text = statusStatus,  // Exibe o status atual
+                        Text = statusStatus,
                         Location = new Point(119, 32),
                         Font = new Font("MS Reference Sans Serif", 9, FontStyle.Bold),
                         AutoSize = true
@@ -196,76 +198,21 @@ namespace ProgramaFull.Formulários
                         Enabled = false
                     };
 
-                    bool concluido = false;
-                    string buttonText = "Começar";
+                    string buttonText = statusStatus == "Concluído" ? "Finalizado" : "Começar";
+                    if (statusStatus != "Pré Conferência") buttonText = "Continuar";
 
-                    if (File.Exists(jsonPath))
-                    {
-                        string jsonContent = File.ReadAllText(jsonPath);
-                        using JsonDocument document = JsonDocument.Parse(jsonContent);
-                        JsonElement root = document.RootElement;
-
-                        if (root.TryGetProperty(statusStatus, out JsonElement etapaArray) &&
-                            etapaArray.ValueKind == JsonValueKind.Array &&
-                            etapaArray.GetArrayLength() > 0)
-                        {
-                            // Verifica se todas as entradas daquela etapa foram concluídas
-                            bool todasConcluidas = etapaArray.EnumerateArray().All(item =>
-                                item.TryGetProperty("Concluído", out JsonElement concluidoElement) &&
-                                (
-                                    concluidoElement.ValueKind == JsonValueKind.True || // Se for um booleano true
-                                    (concluidoElement.ValueKind == JsonValueKind.String && concluidoElement.GetString()?.Equals("true", StringComparison.OrdinalIgnoreCase) == true) // Se for uma string "true"
-                                )
-                            );
-
-
-                            if (todasConcluidas)
-                            {
-                                concluido = true;
-                                buttonText = "Continuar";
-                            }
-                        }
-                    }
-
-                    // Determina a etapa anterior com base na ordem das etapas
-                    Dictionary<string, string> etapaAnteriorMap = new Dictionary<string, string>
-                    {
-                        { "Embalar", "Pré Conferência" },
-                        { "Encaixotar", "Embalar" },
-                        { "Expedição", "Encaixotar" }
-                    };
-
-                    bool etapaAnteriorConcluida = false;
-
-                    if (File.Exists(jsonPath))
-                    {
-                        string jsonContent = File.ReadAllText(jsonPath);
-                        using JsonDocument document = JsonDocument.Parse(jsonContent);
-                        JsonElement root = document.RootElement;
-
-                        if (etapaAnteriorMap.ContainsKey(statusStatus) && root.TryGetProperty(etapaAnteriorMap[statusStatus], out JsonElement etapaAnteriorArray))
-                        {
-                            // Verifica se todas as entradas da etapa anterior estão concluídas
-                            etapaAnteriorConcluida = etapaAnteriorArray.EnumerateArray().All(item =>
-                                item.TryGetProperty("Concluído", out JsonElement concluidoElement) &&
-                                (concluidoElement.ValueKind == JsonValueKind.True || concluidoElement.GetString()?.Equals("true", StringComparison.OrdinalIgnoreCase) == true)
-                            );
-                        }
-                    }
-
-                    // Agora, o botão só será habilitado se a etapa anterior estiver concluída
+                    // Botão para iniciar ou continuar o processo
                     Button buttonComecar = new Button
                     {
                         Width = 109,
                         Height = 23,
                         Location = new Point(720, 28),
-                        Text = buttonText,
+                        Text = statusStatus == "Expedição" ? "Em breve" : buttonText, // Se for Expedição, exibe "Em breve"
                         Tag = statusStatus,
                         TabStop = false,
                         Anchor = AnchorStyles.Right,
-                        Enabled = etapaAnteriorConcluida || statusStatus == "Pré Conferência" // Pré Conferência não precisa verificar etapa anterior
+                        Enabled = statusStatus != "Expedição" // Se já estiver concluído, não permite continuar
                     };
-
 
                     buttonComecar.Click += (s, e) => buttonComecar_click(s, e, Path.GetFileName(pasta), statusStatus);
 
@@ -302,8 +249,8 @@ namespace ProgramaFull.Formulários
                     Dictionary<string, string> proximaEtapa = new Dictionary<string, string>
                     {
                         { "Pré Conferência", "Embalar" },
-                        { "Embalar", "Encaixotar" },
-                        { "Encaixotar", "Expedição" },
+                        { "Embalar", "Etiquetagem" },
+                        { "Etiquetagem", "Expedição" },
                         { "Expedição", "Concluído" }
                     };
 
@@ -381,68 +328,6 @@ namespace ProgramaFull.Formulários
                 MessageBox.Show("O número do agendamento precisa ser um número válido.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             Close();
-        }
-
-
-        private void AtualizarInfoJsonParaEmbalar(string nomePasta, string colaborador)
-        {
-            // Define o caminho para o arquivo JSON
-            string caminhoJson = Path.Combine("P:\\INFORMATICA\\programas\\FULL\\KelvinV2\\agendamentos", nomePasta, "info.json");
-
-            if (!File.Exists(caminhoJson))
-            {
-                // Exibe mensagem de erro caso o arquivo JSON não seja encontrado
-                MessageBox.Show("Arquivo info.json não encontrado.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            string jsonContent = File.ReadAllText(caminhoJson); // Lê o conteúdo do arquivo JSON
-            var options = new JsonSerializerOptions { WriteIndented = true }; // Define opções para formatação do JSON
-            var dados = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonContent); // Deserializa o JSON para um dicionário
-
-            if (dados == null)
-            {
-                // Exibe mensagem de erro caso o JSON não seja válido
-                MessageBox.Show("Erro ao ler o conteúdo do arquivo JSON.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            string empresa = ""; // Inicializa a variável para armazenar o nome da empresa
-            if (dados.ContainsKey("Pré Conferência"))
-            {
-                // Tenta extrair o nome da empresa do JSON da etapa "Pré Conferência"
-                var preConferencia = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(dados["Pré Conferência"].ToString());
-                if (preConferencia != null && preConferencia.Count > 0 && preConferencia[0].ContainsKey("Empresa"))
-                {
-                    empresa = preConferencia[0]["Empresa"].ToString();
-                }
-            }
-
-            // Cria uma nova entrada para a etapa "Embalar"
-            var embalarArray = new List<Dictionary<string, object>>();
-            var novoItem = new Dictionary<string, object>
-                {
-                    { "Status", "Embalar" },
-                    { "Empresa", empresa },
-                    { "Concluído", false },
-                    { "Colaborador", colaborador }
-                };
-
-            embalarArray.Add(novoItem);
-            dados["Embalar"] = embalarArray; // Adiciona a nova entrada ao dicionário principal
-
-            string novoJson = JsonSerializer.Serialize(dados, options); // Serializa o dicionário atualizado
-            File.WriteAllText(caminhoJson, novoJson); // Escreve o conteúdo atualizado no arquivo
-
-            // Exibe mensagem de sucesso
-            MessageBox.Show("Arquivo JSON atualizado com sucesso.", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-
-        private void AbrirFormularioEtiquetagem()
-        {
-            // Abre o formulário para etiquetagem
-            EmbalarEtiquetagemBIPE etiquetagemForm = new EmbalarEtiquetagemBIPE();
-            etiquetagemForm.Show();
         }
 
         private void buttonVer_Click(object sender, EventArgs e, string nomePasta, string statusStatus)

@@ -91,7 +91,14 @@ namespace ProgramaFull.Formulários
         private void finalizarBtn_Click(object sender, EventArgs e)
         {
             CarregarAnuncios();
-            VerificarFinalizacaoAgendamento();
+            if (listBoxAnuncios.Items.Count == 0)
+            {
+                VerificarFinalizacaoAgendamento();
+            }
+            else
+            {
+                MessageBox.Show("Ainda existem etiquetas que precisam ser impressas!", "ERRO", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
         private async void codigoProdutoTxtBox_KeyDown(object sender, KeyEventArgs e) // OK
         {
@@ -109,6 +116,7 @@ namespace ProgramaFull.Formulários
 
             if (e.KeyCode == Keys.Enter)
             {
+                VerificarFinalizacaoAgendamento();
                 string codigoBipado = codigoProdutoTxtBox.Text.Trim();
 
                 if (!string.IsNullOrEmpty(codigoBipado))
@@ -323,10 +331,18 @@ namespace ProgramaFull.Formulários
                         kitPanel.Controls.Add(labelImpresso);
 
                         // Adiciona um evento de clique que exibe a mensagem
-                        kitPanel.Click += (s, e) => MessageBox.Show("Já foi impresso pow", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        pictureBox.Click += (s, e) => MessageBox.Show("Já foi impresso pow", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        label.Click += (s, e) => MessageBox.Show("Já foi impresso pow", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        labelImpresso.Click += (s, e) => MessageBox.Show("Já foi impresso pow", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        //kitPanel.Click += (s, e) => MessageBox.Show("Já foi impresso pow", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        //pictureBox.Click += (s, e) => MessageBox.Show("Já foi impresso pow", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        //label.Click += (s, e) => MessageBox.Show("Já foi impresso pow", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        //labelImpresso.Click += (s, e) => MessageBox.Show("Já foi impresso pow", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+
+                        string etiquetaLocal = etiqueta;
+
+                        kitPanel.Click += (s, e) => VerificarEImprimirEtiquetas(etiquetaLocal);
+                        pictureBox.Click += (s, e) => VerificarEImprimirEtiquetas(etiquetaLocal);
+                        label.Click += (s, e) => VerificarEImprimirEtiquetas(etiquetaLocal);
+                        labelImpresso.Click += (s, e) => VerificarEImprimirEtiquetas(etiquetaLocal);
                     }
                     else
                     {
@@ -569,6 +585,7 @@ namespace ProgramaFull.Formulários
                         CarregarAnuncios();
                         formConfirmacao.Close();
                         formKits.Close();
+                        VerificarFinalizacaoAgendamento();
                     }
                 }
             };
@@ -675,9 +692,12 @@ namespace ProgramaFull.Formulários
                         // (Opcional) Exibir confirmação ou log
                         MessageBox.Show("Arquivo de etiquetas gerado com sucesso!", "Etiqueta", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
+                        // Chamar método para imprimir o conteúdo da string etiquetasZPL
+
                         CarregarAnuncios();
                         formProdutoSimples.Close();
                         formKits.Close();
+                        VerificarFinalizacaoAgendamento();
                     }
                     else
                     {
@@ -779,11 +799,17 @@ namespace ProgramaFull.Formulários
                 Directory.CreateDirectory(dirEtiquetas);
             }
 
-            // Salvar o conteúdo ZPL no diretório "Etiquetas" para depuração
-            string nomeArquivo = Path.Combine(dirEtiquetas, $"{etiqueta.EtiquetaId}_Etiquetas.txt");
-            File.WriteAllText(nomeArquivo, zplCompleto.ToString());
 
-            return zplCompleto.ToString();
+            // Salvar o conteúdo ZPL no diretório "Etiquetas" para depuração
+
+            string nomeArquivo = Path.Combine(dirEtiquetas, $"{etiqueta.EtiquetaId}_Etiquetas.txt");
+            if (!File.Exists(nomeArquivo))
+            {
+                File.WriteAllText(nomeArquivo, zplCompleto.ToString());
+                return zplCompleto.ToString();
+            }
+            
+            return zplCompleto.ToString();          
         }
 
         public static bool EnviarArquivoParaImpressora(string fileContent)
@@ -1006,6 +1032,142 @@ namespace ProgramaFull.Formulários
                 }
             }
             return null; // Retorna null se não for um kit
+        }
+
+        private void VerificarEImprimirEtiquetas(string etiqueta)
+        {
+           // string caminhoArquivoEtiquetas = $@"P:\INFORMATICA\programas\FULL\KelvinV2\agendamentos\{Program.nomePasta}\{etiqueta}_Etiquetas.txt";
+
+           // if (File.Exists(caminhoArquivoEtiquetas))
+          //  {
+                DialogResult resultado = MessageBox.Show(
+                    "As etiquetas já foram impressas anteriormente. Deseja reimprimir?",
+                    "Reimpressão",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question
+                );
+
+                if (resultado == DialogResult.Yes)
+                {
+                    // 🔹 Solicitar senha antes de reimprimir
+                    string senhaDigitada = Microsoft.VisualBasic.Interaction.InputBox("Digite a senha para continuar:", "Autenticação", "", -1, -1);
+
+                    if (senhaDigitada == Program.modoDevCODE)
+                    {
+                        // 🔹 Exibir formulário de seleção de impressão
+                        ExibirFormularioSelecaoEtiquetas(etiqueta);
+                    }
+                    else
+                    {
+                        MessageBox.Show("Senha incorreta. Operação cancelada.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+           // }
+           // else
+          // {
+                // Se não existe o arquivo, gerar e imprimir normalmente
+                // ImprimirEtiquetasNovas();
+           // }
+        }
+
+        private void ExibirFormularioSelecaoEtiquetas(string etiquetaId)
+        {
+            Form formSelecao = new Form()
+            {
+                Text = "Selecionar Quantidade de Etiquetas",
+                StartPosition = FormStartPosition.CenterScreen,
+                Size = new Size(400, 200),
+                FormBorderStyle = FormBorderStyle.FixedDialog
+            };
+
+            Label labelPergunta = new Label()
+            {
+                Text = "Quantas etiquetas deseja imprimir?",
+                Location = new Point(10, 10),
+                AutoSize = true
+            };
+
+            RadioButton radioTodas = new RadioButton()
+            {
+                Text = "Todas as etiquetas",
+                Location = new Point(10, 40),
+                Checked = true
+            };
+
+            RadioButton radioPersonalizado = new RadioButton()
+            {
+                Text = "Escolher quantidade:",
+                Location = new Point(10, 70)
+            };
+
+            TextBox txtQuantidade = new TextBox()
+            {
+                Location = new Point(150, 68),
+                Width = 50,
+                Enabled = false
+            };
+
+            radioPersonalizado.CheckedChanged += (s, e) => txtQuantidade.Enabled = radioPersonalizado.Checked;
+
+            Button btnImprimir = new Button()
+            {
+                Text = "Enviar para Impressão",
+                Location = new Point(10, 110),
+                Width = 150
+            };
+
+            btnImprimir.Click += (s, e) =>
+            {
+                string caminhoArquivo = $@"P:\INFORMATICA\programas\FULL\KelvinV2\agendamentos\{Program.nomePasta}\Etiquetas\{etiquetaId}_Etiquetas.txt";
+                string fileContent;
+
+                if (radioTodas.Checked)
+                {
+                    // 🔹 Verifica se o arquivo já existe antes de imprimir
+                    if (!File.Exists(caminhoArquivo))
+                    {
+                        MessageBox.Show("O arquivo de etiquetas não foi encontrado.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    fileContent = File.ReadAllText(caminhoArquivo);
+                    EnviarArquivoParaImpressora(fileContent);
+                }
+                else if (radioPersonalizado.Checked && int.TryParse(txtQuantidade.Text, out int qtd) && qtd > 0)
+                {
+                    // 🔹 Gerar e imprimir etiquetas com quantidade personalizada
+                    Etiqueta novaEtiqueta = new Etiqueta { QtdEtiquetas = qtd, EtiquetaId = etiquetaId, Anuncio = "Produto Teste" };
+                    Produto produto = new Produto { SKU = "DESCONHECIDO" }; // Se necessário, passe um SKU real
+
+                    fileContent = GerarEtiquetas(novaEtiqueta, produto, caminhoArquivo);
+
+                    if (!string.IsNullOrEmpty(fileContent))
+                    {
+                        EnviarArquivoParaImpressora(fileContent);
+                    }
+                    else
+                    {
+                        MessageBox.Show("Erro ao gerar etiquetas!", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("Digite uma quantidade válida!", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                MessageBox.Show("Etiquetas enviadas para impressão!", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                formSelecao.Close();
+                MessageBox.Show($"{fileContent}");
+            };
+
+            formSelecao.Controls.Add(labelPergunta);
+            formSelecao.Controls.Add(radioTodas);
+            formSelecao.Controls.Add(radioPersonalizado);
+            formSelecao.Controls.Add(txtQuantidade);
+            formSelecao.Controls.Add(btnImprimir);
+            formSelecao.ShowDialog();
         }
 
         public static async Task<string> BuscarImagemProdutoTiny(string idProduto)
