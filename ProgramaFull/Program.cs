@@ -12,7 +12,7 @@ namespace ProgramaFull
         public static string nomeEmpresa = string.Empty;
         public static string statusAtual = string.Empty;
         public static string modoDEVpreConfForm = "OFF";
-        public static string modoDevCODE = "2802200824012011153264897123456789147258369";
+        public static string modoDevCODE = "aZC1u1lW0en0dSEZ";
         public static bool confirmarEmpresa;
         public static string impressoraRelatorio = string.Empty;
         public static string impressoraEtiqueta = string.Empty;

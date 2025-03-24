@@ -1135,31 +1135,56 @@ namespace ProgramaFull.Formulários
                 }
                 else if (radioPersonalizado.Checked && int.TryParse(txtQuantidade.Text, out int qtd) && qtd > 0)
                 {
-                    // 🔹 Gerar e imprimir etiquetas com quantidade personalizada
-                    Etiqueta novaEtiqueta = new Etiqueta { QtdEtiquetas = qtd, EtiquetaId = etiquetaId, Anuncio = "Produto Teste" };
-                    Produto produto = new Produto { SKU = "DESCONHECIDO" }; // Se necessário, passe um SKU real
+                    // Buscar os dados reais do produto pelo etiquetaId
+                    string caminhoJsonBusca = Path.Combine(@"P:\INFORMATICA\programas\FULL\KelvinV2\agendamentos", $"{Program.nomePasta}", $"{Program.nomePasta}_Embalar.json");
 
-                    fileContent = GerarEtiquetas(novaEtiqueta, produto, caminhoArquivo);
-
-                    if (!string.IsNullOrEmpty(fileContent))
+                    if (!File.Exists(caminhoJsonBusca))
                     {
-                        EnviarArquivoParaImpressora(fileContent);
+                        MessageBox.Show("Arquivo JSON não encontrado para buscar os dados do produto.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    string jsonContent = File.ReadAllText(caminhoJsonBusca);
+                    var dados = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(jsonContent);
+
+                    var entrada = dados.FirstOrDefault(p => p.ContainsKey("Etiqueta") && p["Etiqueta"].ToString() == etiquetaId);
+
+                    if (entrada != null)
+                    {
+                        Etiqueta novaEtiqueta = new Etiqueta
+                        {
+                            EtiquetaId = etiquetaId,
+                            Anuncio = entrada.ContainsKey("Anuncio") ? entrada["Anuncio"].ToString() : "Sem Anúncio",
+                            QtdEtiquetas = qtd
+                        };
+
+                        Produto produto = new Produto
+                        {
+                            SKU = entrada.ContainsKey("SKU") ? entrada["SKU"].ToString() : "Sem SKU",
+                            NomeProduto = novaEtiqueta.Anuncio
+                        };
+
+                        fileContent = GerarEtiquetas(novaEtiqueta, produto, caminhoArquivo);
+
+                        if (!string.IsNullOrEmpty(fileContent))
+                        {
+                            EnviarArquivoParaImpressora(fileContent);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Erro ao gerar etiquetas!", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
                     }
                     else
                     {
-                        MessageBox.Show("Erro ao gerar etiquetas!", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("Não foi possível localizar os dados do produto no JSON.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
                     }
-                }
-                else
-                {
-                    MessageBox.Show("Digite uma quantidade válida!", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
                 }
 
                 MessageBox.Show("Etiquetas enviadas para impressão!", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 formSelecao.Close();
-                MessageBox.Show($"{fileContent}");
             };
 
             formSelecao.Controls.Add(labelPergunta);
