@@ -145,9 +145,12 @@ namespace ProgramaFull
 
             if (!File.Exists(caminhoJson))
             {
-                MessageBox.Show("Arquivo info.json não encontrado.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
+                // Cria estrutura básica
+                var estruturaInicial = new Dictionary<string, List<Dictionary<string, object>>>();
+                var jsonInicial = JsonSerializer.Serialize(estruturaInicial, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(caminhoJson, jsonInicial);
             }
+
 
             string jsonContent = File.ReadAllText(caminhoJson);
             var options = new JsonSerializerOptions { WriteIndented = true };
@@ -157,10 +160,12 @@ namespace ProgramaFull
                 JsonSerializer.Deserialize<Dictionary<string, List<Dictionary<string, object>>>>(jsonContent) ?? new Dictionary<string, List<Dictionary<string, object>>>();
 
             // Obtém a empresa a partir da etapa "Pré Conferência" (se disponível)
-            string empresa = "Indefinido";
+            // Tenta obter a empresa do JSON, senão usa o valor atual do programa
+            string empresa = string.IsNullOrWhiteSpace(Program.nomeEmpresa) ? "Indefinido" : Program.nomeEmpresa; // <-- usa o valor salvo em memória caso não encontre nada ele define como "Indefinido"
             if (dados.ContainsKey("Pré Conferência") && dados["Pré Conferência"].Count > 0)
             {
-                if (dados["Pré Conferência"][0].ContainsKey("Empresa"))
+                if (dados["Pré Conferência"][0].ContainsKey("Empresa") &&
+                    !string.IsNullOrEmpty(dados["Pré Conferência"][0]["Empresa"]?.ToString()))
                 {
                     empresa = dados["Pré Conferência"][0]["Empresa"].ToString();
                 }

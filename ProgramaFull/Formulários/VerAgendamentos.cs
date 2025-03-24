@@ -11,6 +11,7 @@
     using System.Drawing.Text;
     using System.Diagnostics;
 using System.DirectoryServices.ActiveDirectory;
+using Microsoft.VisualBasic;
 
 namespace ProgramaFull.Formulários
     {

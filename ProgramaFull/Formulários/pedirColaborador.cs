@@ -49,7 +49,7 @@ namespace ProgramaFull.Formulários
             {
                 Program.nomeColaborador = caixaTexto.Text;
 
-                // Atualiza as informações do JSON
+                // ✅ Cria o JSON corretamente com colaborador e empresa
                 Program.AtualizarInfoJson(Program.nomePasta.ToString(), Program.statusAtual, Program.nomeColaborador);
 
                 // Define o próximo formulário dinamicamente com base no status

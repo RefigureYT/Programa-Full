@@ -661,12 +661,15 @@ namespace ProgramaFull.Formulários
             TextBox textBoxBipagem = new TextBox { Width = 200 };
             panel.Controls.Add(textBoxBipagem);
 
-            textBoxBipagem.KeyDown += (sender, e) =>
+            textBoxBipagem.KeyDown += async (sender, e) =>
             {
                 if (e.KeyCode == Keys.Enter)
                 {
                     string bipado = textBoxBipagem.Text.Trim();
-                    if (bipado == produto["SKU"].ToString() || (produto.ContainsKey("Codebar") && produto["Codebar"].ToString() == bipado))
+                    // Buscar código de barras atualizado via API
+                    string codigoBarrasTiny = await BuscarCodigoBarrasProdutoTiny(produto["ID"].ToString());
+
+                    if (bipado == produto["SKU"].ToString() || bipado == codigoBarrasTiny)
                     {
                         MessageBox.Show("Produto confirmado!", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         formProdutoSimples.Close();
@@ -1308,18 +1311,26 @@ namespace ProgramaFull.Formulários
 
                 foreach (var entrada in dados)
                 {
-                    if (entrada.ContainsKey("Anuncio") && entrada.ContainsKey("Qtd Etiquetas") && entrada.ContainsKey("Etiqueta"))
+                    try
                     {
-                        string etiqueta = entrada["Etiqueta"].ToString().Trim(); // Remove espaços extras
+                        if (!entrada.ContainsKey("Anuncio") || !entrada.ContainsKey("Qtd Etiquetas") || !entrada.ContainsKey("Etiqueta"))
+                            continue;
+
+                        string etiqueta = entrada["Etiqueta"]?.ToString()?.Trim() ?? "";
+                        string anuncio = entrada["Anuncio"]?.ToString()?.Trim() ?? "";
+                        string qtdEtiquetas = entrada["Qtd Etiquetas"]?.ToString()?.Trim() ?? "";
 
                         if (!string.IsNullOrEmpty(etiqueta) && !etiquetasImpressas.Contains(etiqueta))
                         {
-                            string anuncio = entrada["Anuncio"].ToString().Trim();
-                            string qtdEtiquetas = entrada["Qtd Etiquetas"].ToString().Trim();
                             listBoxAnuncios.Items.Add($"{anuncio} - {qtdEtiquetas} Unidades");
                         }
                     }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Erro ao processar entrada: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
                 }
+
             }
             catch (Exception ex)
             {
