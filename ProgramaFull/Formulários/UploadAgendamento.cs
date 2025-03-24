@@ -26,8 +26,25 @@ namespace ProgramaFull.Formulários
 
         private void btnEmbalar_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("Ainda em desenvolvimento...", "Em breve", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+            string driveEmbalar = "https://drive.google.com/drive/folders/1uJO5NKdtDcUl9uLTWdexmkoOx4apDa0Y";
+
+            try
+            {
+                // Abre o link no navegador padrão
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = driveEmbalar,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Erro ao abrir o link: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
+            JanelaCarregamento();
         }
+
 
         private void btnEncaixotar_Click(object sender, EventArgs e)
         {

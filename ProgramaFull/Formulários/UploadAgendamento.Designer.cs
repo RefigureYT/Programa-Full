@@ -75,13 +75,11 @@
             // 
             // btnEmbalar
             // 
-            btnEmbalar.Enabled = false;
             btnEmbalar.Font = new Font("Segoe UI", 11.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
             btnEmbalar.Location = new Point(66, 148);
             btnEmbalar.Name = "btnEmbalar";
             btnEmbalar.Size = new Size(204, 54);
             btnEmbalar.TabIndex = 0;
-            btnEmbalar.TabStop = false;
             btnEmbalar.Text = "Embalar";
             btnEmbalar.UseVisualStyleBackColor = true;
             btnEmbalar.Click += btnEmbalar_Click;
