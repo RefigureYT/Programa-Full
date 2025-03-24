@@ -582,6 +582,9 @@ namespace ProgramaFull.Formulários
                         // Exibir confirmação
                         MessageBox.Show("Arquivo de etiquetas do kit gerado com sucesso!", "Etiqueta", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
+                        // 🔹 Envia para a impressora
+                        EnviarArquivoParaImpressora(etiquetasZPL);
+
                         CarregarAnuncios();
                         formConfirmacao.Close();
                         formKits.Close();
@@ -692,7 +695,8 @@ namespace ProgramaFull.Formulários
                         // (Opcional) Exibir confirmação ou log
                         MessageBox.Show("Arquivo de etiquetas gerado com sucesso!", "Etiqueta", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                        // Chamar método para imprimir o conteúdo da string etiquetasZPL
+                        // 🔹 Envia para a impressora
+                        EnviarArquivoParaImpressora(etiquetasZPL);
 
                         CarregarAnuncios();
                         formProdutoSimples.Close();
