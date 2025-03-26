@@ -43,6 +43,7 @@
             panel3 = new Panel();
             panel2 = new Panel();
             panel1 = new Panel();
+            labelTypeVersion = new Label();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)pictureBox2).BeginInit();
             SuspendLayout();
@@ -193,12 +194,23 @@
             panel1.Size = new Size(530, 3);
             panel1.TabIndex = 15;
             // 
+            // labelTypeVersion
+            // 
+            labelTypeVersion.AutoSize = true;
+            labelTypeVersion.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            labelTypeVersion.Location = new Point(16, 340);
+            labelTypeVersion.Name = "labelTypeVersion";
+            labelTypeVersion.Size = new Size(44, 17);
+            labelTypeVersion.TabIndex = 19;
+            labelTypeVersion.Text = "Alpha";
+            // 
             // Configuracoes
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = SystemColors.ControlLightLight;
             ClientSize = new Size(523, 367);
+            Controls.Add(labelTypeVersion);
             Controls.Add(panel4);
             Controls.Add(panel3);
             Controls.Add(panel2);
@@ -241,5 +253,6 @@
         private Panel panel3;
         private Panel panel2;
         private Panel panel1;
+        private Label labelTypeVersion;
     }
 }

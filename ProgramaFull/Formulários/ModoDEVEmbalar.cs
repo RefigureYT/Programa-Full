@@ -12,9 +12,17 @@ namespace ProgramaFull.Formulários
 {
     public partial class ModoDEVEmbalar : Form
     {
-        public ModoDEVEmbalar()
+        private EmbalarEtiquetagemBIPE embalarForm;
+
+        public ModoDEVEmbalar(EmbalarEtiquetagemBIPE embalarFormRef)
         {
             InitializeComponent();
+            embalarForm = embalarFormRef;
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            embalarForm.CarregarAnuncios();
         }
     }
 }

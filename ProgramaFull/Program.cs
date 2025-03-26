@@ -19,7 +19,16 @@ namespace ProgramaFull
         public static string dataHoraInicioRelatorio = string.Empty;
         public static string permanencia = string.Empty;
         public static string accessTokenTinyV3 = string.Empty;
+        public static string linkReportButton = "https://encurtador.com.br/XVIM3";
 
+
+        public static string typeVersion = "alpha";
+        public static string version = "1.0.4";
+        // Versões:
+        // alpha  = versão inicial, instável, para testes internos (Com muitos bugs)
+        // beta   = mais estável, com funcionalidades completas, ainda em testes (Com menos bugs)
+        // rc     = candidato à versão final, sem bugs críticos
+        // release = versão estável, pronta para produção
 
         public static List<int> kitsConfirmados = new List<int>();
 

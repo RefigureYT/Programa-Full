@@ -145,6 +145,7 @@
             codigoProdutoTxtBox.Name = "codigoProdutoTxtBox";
             codigoProdutoTxtBox.Size = new Size(467, 23);
             codigoProdutoTxtBox.TabIndex = 75;
+            codigoProdutoTxtBox.TextChanged += codigoProdutoTxtBox_TextChanged;
             codigoProdutoTxtBox.KeyDown += codigoProdutoTxtBox_KeyDown;
             // 
             // labelTutorial

@@ -39,6 +39,7 @@
             panel2 = new Panel();
             panel3 = new Panel();
             panel4 = new Panel();
+            labelTypeVersion = new Label();
             ((System.ComponentModel.ISupportInitialize)JauPesca).BeginInit();
             SuspendLayout();
             // 
@@ -106,6 +107,7 @@
             JauPesca.SizeMode = PictureBoxSizeMode.AutoSize;
             JauPesca.TabIndex = 7;
             JauPesca.TabStop = false;
+            JauPesca.DoubleClick += JauPesca_DoubleClick;
             // 
             // textoMenu
             // 
@@ -149,12 +151,24 @@
             panel4.Size = new Size(500, 10);
             panel4.TabIndex = 14;
             // 
+            // labelTypeVersion
+            // 
+            labelTypeVersion.AutoSize = true;
+            labelTypeVersion.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            labelTypeVersion.Location = new Point(171, 20);
+            labelTypeVersion.Name = "labelTypeVersion";
+            labelTypeVersion.Size = new Size(44, 17);
+            labelTypeVersion.TabIndex = 20;
+            labelTypeVersion.Text = "Alpha";
+            labelTypeVersion.Visible = false;
+            // 
             // Menu
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(436, 466);
             ControlBox = false;
+            Controls.Add(labelTypeVersion);
             Controls.Add(panel4);
             Controls.Add(panel2);
             Controls.Add(panel3);
@@ -187,5 +201,6 @@
         private Panel panel2;
         private Panel panel3;
         private Panel panel4;
+        private Label labelTypeVersion;
     }
 }

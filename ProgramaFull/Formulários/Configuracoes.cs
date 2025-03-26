@@ -22,8 +22,15 @@ namespace ProgramaFull.Formulários
         public Configuracoes()
         {
             InitializeComponent();
+            VersaoUpdated();
         }
 
+        private void VersaoUpdated()
+        {
+            string typeVersion = Program.typeVersion;
+            string version = Program.version;
+            labelTypeVersion.Text = $"{typeVersion}: {version}";
+        }
 
         // Evento para salvar a impressora selecionada
         private void btnSalvar_Click(object sender, EventArgs e)

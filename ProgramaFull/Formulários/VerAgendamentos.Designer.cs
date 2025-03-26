@@ -49,9 +49,12 @@
             panel8 = new Panel();
             comboBoxFiltro = new ComboBox();
             refreshButton = new Button();
+            btnReport = new Button();
+            pictureBox3 = new PictureBox();
             caixaAg.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             painelAgendamentos.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)pictureBox3).BeginInit();
             SuspendLayout();
             // 
             // btnVoltar
@@ -83,6 +86,7 @@
             caixaAg.Size = new Size(856, 72);
             caixaAg.TabIndex = 2;
             caixaAg.TabStop = false;
+            caixaAg.Text = " ";
             caixaAg.Visible = false;
             caixaAg.Enter += groupBox1_Enter;
             // 
@@ -266,11 +270,35 @@
             refreshButton.UseVisualStyleBackColor = true;
             refreshButton.Click += refreshButton_Click;
             // 
+            // btnReport
+            // 
+            btnReport.BackgroundImageLayout = ImageLayout.Zoom;
+            btnReport.Font = new Font("Segoe UI", 8.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnReport.Location = new Point(809, 421);
+            btnReport.Name = "btnReport";
+            btnReport.Size = new Size(75, 23);
+            btnReport.TabIndex = 11;
+            btnReport.Text = "Report";
+            btnReport.UseVisualStyleBackColor = true;
+            btnReport.Click += btnReport_Click;
+            // 
+            // pictureBox3
+            // 
+            pictureBox3.Image = Properties.Resources.warning;
+            pictureBox3.Location = new Point(773, 421);
+            pictureBox3.Name = "pictureBox3";
+            pictureBox3.Size = new Size(30, 23);
+            pictureBox3.SizeMode = PictureBoxSizeMode.Zoom;
+            pictureBox3.TabIndex = 13;
+            pictureBox3.TabStop = false;
+            // 
             // VerAgendamentos
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(903, 459);
+            Controls.Add(pictureBox3);
+            Controls.Add(btnReport);
             Controls.Add(refreshButton);
             Controls.Add(comboBoxFiltro);
             Controls.Add(panel8);
@@ -292,6 +320,7 @@
             caixaAg.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
             painelAgendamentos.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)pictureBox3).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -319,5 +348,7 @@
         private Panel panel8;
         private ComboBox comboBoxFiltro;
         private Button refreshButton;
+        private Button btnReport;
+        private PictureBox pictureBox3;
     }
 }

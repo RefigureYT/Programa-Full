@@ -243,7 +243,7 @@ namespace ProgramaFull.Formulários
                 string caminhoEmbalarJson = Path.Combine("P:\\INFORMATICA\\programas\\FULL\\KelvinV2\\agendamentos", nomePasta, $"{numeroAgendamento}_Embalar.json");
 
                 Button clickedButton = sender as Button; // Identifica o botão que foi clicado
-               
+
                 if (clickedButton != null && clickedButton.Text == "Começar")
                 {
                     // Dicionário com a ordem das etapas
@@ -264,7 +264,7 @@ namespace ProgramaFull.Formulários
                     }
                     else if (statusStatus == "Embalar")
                     {
-                        if(!File.Exists(caminhoEmbalarJson))
+                        if (!File.Exists(caminhoEmbalarJson))
                         {
                             DialogResult resultado = MessageBox.Show($"O arquivo {numeroAgendamento}_Embalar.json não foi encontrado. Não é possível continuar." +
                                 "\n\nSolução sugerida: Envie o PDF em \"Embalar\" no Google Drive. Se você já enviou aguarde até que o processo seja finalizado." +
@@ -272,7 +272,7 @@ namespace ProgramaFull.Formulários
                                 "\n\n*CASO NÃO FUNCIONE CONTATE O ADMINISTRADOR*", "Erro", MessageBoxButtons.YesNo, MessageBoxIcon.Error
                             );
 
-                            if(resultado == DialogResult.Yes)
+                            if (resultado == DialogResult.Yes)
                             {
                                 // Abrir o Google Drive no navegador
                                 Process.Start(new ProcessStartInfo
@@ -294,7 +294,7 @@ namespace ProgramaFull.Formulários
                         if (janelaColaborador.ShowDialog() == DialogResult.OK)
                         {
                             string colaborador = Program.nomeColaborador;
-                             
+
                             // Atualiza o JSON para a próxima etapa
                             Program.AtualizarInfoJson(nomePasta, proximaEtapa[statusStatus], colaborador);
 
@@ -405,6 +405,25 @@ namespace ProgramaFull.Formulários
             // Chama LoadPastas() novamente com o filtro atual
             LoadPastas(diretorio, filtroSelecionado);
 
+        }
+
+        private void btnReport_Click(object sender, EventArgs e)
+        {
+            string link = Program.linkReportButton;
+
+            try
+            {
+                // Abre o link no navegador padrão
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = link,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Erro ao abrir o link: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
     }
 }

@@ -60,31 +60,15 @@ namespace ProgramaFull.Formulários
 
         private void btnVoltar_Click(object sender, EventArgs e)
         {
-            if (MessageBox.Show("Você vai voltar para a janela de agendamentos. VOCÊ TEM CERTEZA QUE DESEJA SAIR?\n\n Você perderá tudo que fez até o momento... (função backup ainda em desenvolvimento)", "Deseja voltar?", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation) == DialogResult.Yes)
-            {
-                //MessageBox.Show("Backup Realizado");
-                this.Close();                    // Precisa Criar a lógica de backup
-                new VerAgendamentos().Show();
-            }
+            this.Close();
+            new VerAgendamentos().Show();
         } // OK
 
         private void btnQuit_Click(object sender, EventArgs e)
         {
             if (MessageBox.Show("Você está prestes a fechar essa o programa, pressione \"OK\" se estiver de acordo.", "AVISO", MessageBoxButtons.OKCancel) == DialogResult.OK)
             {
-                if (MessageBox.Show("Você tem mesmo certeza? Você está no meio de um processo muito importante!", "ATENÇÃO!!!", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
-                {
-                    if (MessageBox.Show("VOCÊ TEM CERTEZA QUE DESEJA SAIR?\n\n Você perderá tudo que fez até o momento... (função backup ainda em desenvolvimento)", "VAI SAIR MESMO????", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation) == DialogResult.Yes)
-                    {
-                        //MessageBox.Show("Backup Realizado");
-                        Application.Exit();
-                    }
-                    //else
-                    //{
-                    //    MessageBox.Show("Não será salvo o backup ;-)");
-                    //    Application.Exit();
-                    //}
-                }
+                Application.Exit();
             }
         } // OK
 
@@ -103,15 +87,10 @@ namespace ProgramaFull.Formulários
         private async void codigoProdutoTxtBox_KeyDown(object sender, KeyEventArgs e) // OK
         {
 
-            if (codigoProdutoTxtBox.Text.Trim() == "//#1234Atualizar")
-            {
-                CarregarAnuncios();
-                codigoProdutoTxtBox.Text = "";
-            }
             //if (codigoProdutoTxtBox.Text.Trim() == Program.modoDevCODE)
             //{
-            //    ModoDEVEmbalar modoDev = new ModoDEVEmbalar(this);
-            //    modoDev.Show();
+            //    CarregarAnuncios();
+            //    codigoProdutoTxtBox.Text = "";
             //}
 
             if (e.KeyCode == Keys.Enter)
@@ -229,7 +208,7 @@ namespace ProgramaFull.Formulários
             {
                 Text = "Kits Encontrados",
                 StartPosition = FormStartPosition.CenterScreen,
-                Size = new Size(450, 600),
+                Size = new Size(460, 630),
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 BackColor = Color.White
             };
@@ -294,7 +273,7 @@ namespace ProgramaFull.Formulários
                         Width = 400,
                         Height = 130,
                         Padding = new Padding(5),
-                        BackColor = jaImpresso ? Color.Gray : Color.White // Muda a cor do fundo se já foi impresso
+                        BackColor = jaImpresso ? Color.LightGray : Color.White // Muda a cor do fundo se já foi impresso
                     };
 
                     // 🔹 Criar PictureBox para exibir a imagem
@@ -322,11 +301,11 @@ namespace ProgramaFull.Formulários
                     {
                         Label labelImpresso = new Label
                         {
-                            Text = "Já foi impresso",
-                            Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                            Text = "JÁ FOI IMPRESSO",
+                            Font = new Font("Segoe UI", 10, FontStyle.Bold),
                             ForeColor = Color.Red,
                             AutoSize = true,
-                            Location = new Point(300, 100) // Posiciona no canto inferior direito
+                            Location = new Point(270, 100) // Posiciona no canto inferior direito
                         };
                         kitPanel.Controls.Add(labelImpresso);
 
@@ -815,8 +794,8 @@ namespace ProgramaFull.Formulários
                 File.WriteAllText(nomeArquivo, zplCompleto.ToString());
                 return zplCompleto.ToString();
             }
-            
-            return zplCompleto.ToString();          
+
+            return zplCompleto.ToString();
         }
 
         public static bool EnviarArquivoParaImpressora(string fileContent)
@@ -1043,38 +1022,38 @@ namespace ProgramaFull.Formulários
 
         private void VerificarEImprimirEtiquetas(string etiqueta)
         {
-           // string caminhoArquivoEtiquetas = $@"P:\INFORMATICA\programas\FULL\KelvinV2\agendamentos\{Program.nomePasta}\{etiqueta}_Etiquetas.txt";
+            // string caminhoArquivoEtiquetas = $@"P:\INFORMATICA\programas\FULL\KelvinV2\agendamentos\{Program.nomePasta}\{etiqueta}_Etiquetas.txt";
 
-           // if (File.Exists(caminhoArquivoEtiquetas))
-          //  {
-                DialogResult resultado = MessageBox.Show(
-                    "As etiquetas já foram impressas anteriormente. Deseja reimprimir?",
-                    "Reimpressão",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Question
-                );
+            // if (File.Exists(caminhoArquivoEtiquetas))
+            //  {
+            DialogResult resultado = MessageBox.Show(
+                "As etiquetas já foram impressas anteriormente. Deseja reimprimir?",
+                "Reimpressão",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question
+            );
 
-                if (resultado == DialogResult.Yes)
+            if (resultado == DialogResult.Yes)
+            {
+                // 🔹 Solicitar senha antes de reimprimir
+                string senhaDigitada = Microsoft.VisualBasic.Interaction.InputBox("Digite a senha para continuar:", "Autenticação", "", -1, -1);
+
+                if (senhaDigitada == Program.modoDevCODE)
                 {
-                    // 🔹 Solicitar senha antes de reimprimir
-                    string senhaDigitada = Microsoft.VisualBasic.Interaction.InputBox("Digite a senha para continuar:", "Autenticação", "", -1, -1);
-
-                    if (senhaDigitada == Program.modoDevCODE)
-                    {
-                        // 🔹 Exibir formulário de seleção de impressão
-                        ExibirFormularioSelecaoEtiquetas(etiqueta);
-                    }
-                    else
-                    {
-                        MessageBox.Show("Senha incorreta. Operação cancelada.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
+                    // 🔹 Exibir formulário de seleção de impressão
+                    ExibirFormularioSelecaoEtiquetas(etiqueta);
                 }
-           // }
-           // else
-          // {
-                // Se não existe o arquivo, gerar e imprimir normalmente
-                // ImprimirEtiquetasNovas();
-           // }
+                else
+                {
+                    MessageBox.Show("Senha incorreta. Operação cancelada.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            // }
+            // else
+            // {
+            // Se não existe o arquivo, gerar e imprimir normalmente
+            // ImprimirEtiquetasNovas();
+            // }
         }
 
         private void ExibirFormularioSelecaoEtiquetas(string etiquetaId)
@@ -1267,7 +1246,7 @@ namespace ProgramaFull.Formulários
         /// </summary>
         /// 
 
-        private void CarregarAnuncios()
+        public void CarregarAnuncios()
         {
             string caminhoJson = Path.Combine(@"P:\INFORMATICA\programas\FULL\KelvinV2\agendamentos", $"{Program.nomePasta}", $"{Program.nomePasta}_Embalar.json");
             string caminhoEtiquetas = Path.Combine(@"P:\INFORMATICA\programas\FULL\KelvinV2\agendamentos", $"{Program.nomePasta}", "Etiquetas");
@@ -1624,6 +1603,16 @@ namespace ProgramaFull.Formulários
 
             [JsonPropertyName("Anuncio")]
             public string Anuncio { get; set; } // Corrigido para string
+        }
+
+        private void codigoProdutoTxtBox_TextChanged(object sender, EventArgs e)
+        {
+            if (codigoProdutoTxtBox.Text.Trim() == Program.modoDevCODE)
+            {
+                codigoProdutoTxtBox.Text = "";
+                ModoDEVEmbalar modoDev = new ModoDEVEmbalar(this);
+                modoDev.ShowDialog();
+            }
         }
     }
 }

@@ -19,6 +19,14 @@ namespace ProgramaFull.Formulários
         public Menu()
         {
             InitializeComponent();
+            VersaoUpdated();
+        }
+
+        private void VersaoUpdated()
+        {
+            string typeVersion = Program.typeVersion;
+            string version = Program.version;
+            labelTypeVersion.Text = $"{typeVersion}: {version}";
         }
 
         private void Menu_Load(object sender, EventArgs e)
@@ -72,6 +80,18 @@ namespace ProgramaFull.Formulários
             uploadAgendamento.Show();
 
             this.Visible = false;
+        }
+
+        private void JauPesca_DoubleClick(object sender, EventArgs e)
+        {
+            if (labelTypeVersion.Visible == true)
+            {
+                labelTypeVersion.Visible = false;
+            }
+            else if (labelTypeVersion.Visible == false)
+            {
+                labelTypeVersion.Visible = true;               
+            }
         }
     }
 }
