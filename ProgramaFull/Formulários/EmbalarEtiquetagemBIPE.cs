@@ -15,6 +15,7 @@ using System.Runtime.InteropServices;
 using Microsoft.VisualBasic;
 using static ProgramaFull.Formulários.EmbalarEtiquetagemBIPE;
 using System.Security.Cryptography.X509Certificates;
+using ProgramaFull.Properties;
 
 namespace ProgramaFull.Formulários
 {
@@ -116,8 +117,10 @@ namespace ProgramaFull.Formulários
 
                         if (produtosEncontrados.Count > 0)
                         {
+                            var embalarForm = Application.OpenForms.OfType<EmbalarEtiquetagemBIPE>().FirstOrDefault();
+
                             // Chama o próximo método, passando a lista de objetos
-                            ProcessarProdutosEncontrados(produtosEncontrados);
+                            ProcessarProdutosEncontrados(produtosEncontrados, embalarForm);
                         }
                         else
                         {
@@ -191,7 +194,7 @@ namespace ProgramaFull.Formulários
             return produtosEncontrados;
         }
 
-        private async Task ProcessarProdutosEncontrados(List<Dictionary<string, object>> produtosEncontrados) // OK
+        private async Task ProcessarProdutosEncontrados(List<Dictionary<string, object>> produtosEncontrados, Form embalarForm) // OK
         {
             // 🔹 Fechar qualquer formulário aberto antes de abrir um novo
             foreach (Form openForm in Application.OpenForms)
@@ -206,11 +209,20 @@ namespace ProgramaFull.Formulários
             // 🔹 Criar o formulário
             Form formKits = new Form
             {
-                Text = "Kits Encontrados",
+                //Text = "Kits Encontrados",
                 StartPosition = FormStartPosition.CenterScreen,
+                Size = new Size(480, 670),
+                FormBorderStyle = FormBorderStyle.None,
+                BackColor = Color.FromArgb(51, 153, 255)
+            };
+
+            // Painel principal onde vai ficar tudo (até os outros painéis)
+            Panel painelPrincipal = new Panel
+            {
                 Size = new Size(460, 630),
-                FormBorderStyle = FormBorderStyle.FixedDialog,
-                BackColor = Color.White
+                Location = new Point(10, 10),
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle
             };
 
             // 🔹 Criar um painel com rolagem
@@ -229,11 +241,34 @@ namespace ProgramaFull.Formulários
                 WrapContents = false
             };
 
+            Panel panelBtnCancel = new Panel
+            {
+                Size = new Size(100, 30),
+                Location = new Point(371, 637)
+            };
+
+            Button btnCancel = new Button
+            {
+                Text = "Cancelar",
+                Size = new Size(60, 25),
+                Dock = DockStyle.Bottom,
+                Cursor = Cursors.Hand,
+                BackColor = Color.WhiteSmoke,
+                TabIndex = 0,
+                TabStop = false
+            };
+            btnCancel.Click += (s, e) =>
+            {
+                embalarForm.Show();
+                formKits.Close();
+            };
+
+            panelBtnCancel.Controls.Add(btnCancel);
             // 🔹 Adicionar título ao formulário
             Label titulo = new Label
             {
-                Text = "Produto Bipado Encontrado nos Anúncios:",
-                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                Text = "O produto bipado foi encontrado nos Anúncios:",
+                Font = new Font("Segoe UI", 13, FontStyle.Bold),
                 AutoSize = true,
                 ForeColor = Color.Black
             };
@@ -273,7 +308,8 @@ namespace ProgramaFull.Formulários
                         Width = 400,
                         Height = 130,
                         Padding = new Padding(5),
-                        BackColor = jaImpresso ? Color.LightGray : Color.White // Muda a cor do fundo se já foi impresso
+                        BackColor = jaImpresso ? Color.LightGray : Color.White, // Muda a cor do fundo se já foi impresso
+                        Cursor = Cursors.Hand
                     };
 
                     // 🔹 Criar PictureBox para exibir a imagem
@@ -282,7 +318,8 @@ namespace ProgramaFull.Formulários
                         Size = new Size(100, 100),
                         Location = new Point(5, 5),
                         SizeMode = PictureBoxSizeMode.StretchImage,
-                        ImageLocation = imagemUrl
+                        ImageLocation = imagemUrl,
+                        Cursor = Cursors.Hand
                     };
 
                     // 🔹 Criar Label com informações do produto
@@ -293,7 +330,8 @@ namespace ProgramaFull.Formulários
                         Font = new Font("Segoe UI", 10, FontStyle.Bold),
                         ForeColor = Color.Black,
                         AutoSize = true,
-                        MaximumSize = new Size(280, 0)
+                        MaximumSize = new Size(280, 0),
+                        Cursor = Cursors.Hand
                     };
 
                     // 🔹 Se a etiqueta já foi impressa, adicionar um aviso visual
@@ -318,10 +356,29 @@ namespace ProgramaFull.Formulários
 
                         string etiquetaLocal = etiqueta;
 
-                        kitPanel.Click += (s, e) => VerificarEImprimirEtiquetas(etiquetaLocal);
-                        pictureBox.Click += (s, e) => VerificarEImprimirEtiquetas(etiquetaLocal);
-                        label.Click += (s, e) => VerificarEImprimirEtiquetas(etiquetaLocal);
-                        labelImpresso.Click += (s, e) => VerificarEImprimirEtiquetas(etiquetaLocal);
+                        kitPanel.Click += (s, e) =>
+                        {
+                            //formKits.Visible = false;
+                            VerificarEImprimirEtiquetas(etiquetaLocal);   
+                        };
+
+                        pictureBox.Click += (s, e) =>
+                        {
+                            //formKits.Visible = false;
+                            VerificarEImprimirEtiquetas(etiquetaLocal);
+                        };
+
+                        label.Click += (s, e) => 
+                        {
+                            //formKits.Visible = false;
+                            VerificarEImprimirEtiquetas(etiquetaLocal); 
+                        };
+
+                        labelImpresso.Click += (s, e) => 
+                        {
+                            //formKits.Visible = false;
+                            VerificarEImprimirEtiquetas(etiquetaLocal);
+                        };
                     }
                     else
                     {
@@ -334,11 +391,26 @@ namespace ProgramaFull.Formulários
 
                         // Cria cópia específica para cada produto no evento de clique
                         Dictionary<string, object> produtoSelecionado = new Dictionary<string, object>(produto);
-
+                        var embalarEtiquetagemBIPE = Application.OpenForms.OfType<EmbalarEtiquetagemBIPE>().FirstOrDefault();
                         // 🔹 Evento de clique para abrir o formulário de confirmação
-                        kitPanel.Click += (s, e) => AbrirFormularioConfirmacao(idProdutoLocal, nomeAnuncioLocal, imagemUrlLocal, new List<Dictionary<string, object>> { produtoSelecionado }, formKits);
-                        pictureBox.Click += (s, e) => AbrirFormularioConfirmacao(idProdutoLocal, nomeAnuncioLocal, imagemUrlLocal, new List<Dictionary<string, object>> { produtoSelecionado }, formKits);
-                        label.Click += (s, e) => AbrirFormularioConfirmacao(idProdutoLocal, nomeAnuncioLocal, imagemUrlLocal, new List<Dictionary<string, object>> { produtoSelecionado }, formKits);
+                        kitPanel.Click += (s, e) =>
+                        {
+                            formKits.Hide();
+                            AbrirFormularioConfirmacao(idProdutoLocal, nomeAnuncioLocal, imagemUrlLocal, new List<Dictionary<string, object>> { produtoSelecionado }, formKits, embalarEtiquetagemBIPE);
+                        };
+
+                        pictureBox.Click += (s, e) => 
+                        {
+                            formKits.Hide();
+                            AbrirFormularioConfirmacao(idProdutoLocal, nomeAnuncioLocal, imagemUrlLocal, new List<Dictionary<string, object>> { produtoSelecionado }, formKits, embalarEtiquetagemBIPE);
+                        };
+
+                        label.Click += (s, e) => 
+                        {
+                            formKits.Hide();
+                           AbrirFormularioConfirmacao(idProdutoLocal, nomeAnuncioLocal, imagemUrlLocal, new List<Dictionary<string, object>> { produtoSelecionado }, formKits, embalarEtiquetagemBIPE);
+                        };
+
                     }
 
                     // 🔹 Adicionar elementos ao painel do produto
@@ -350,11 +422,15 @@ namespace ProgramaFull.Formulários
 
             // 🔹 Adicionar o painel de rolagem e exibir o formulário
             scrollPanel.Controls.Add(panel);
-            formKits.Controls.Add(scrollPanel);
+            formKits.Controls.Add(painelPrincipal);
+            formKits.Controls.Add(panelBtnCancel);
+            painelPrincipal.Controls.Add(scrollPanel);
+
+            embalarForm.Hide();
             formKits.ShowDialog();
         }
 
-        private async void AbrirFormularioConfirmacao(string idProduto, string nomeAnuncio, string imagemUrl, List<Dictionary<string, object>> produtosEncontrados, Form formKits)
+        private async void AbrirFormularioConfirmacao(string idProduto, string nomeAnuncio, string imagemUrl, List<Dictionary<string, object>> produtosEncontrados, Form formKits, Form embalarEtiquetagemBIPE)
         {
             // 🔹 Encontrar os dados do produto no JSON
             var produtoData = produtosEncontrados.Where(p => p["ID"].ToString() == idProduto).ToList();
@@ -371,12 +447,13 @@ namespace ProgramaFull.Formulários
             // 🔹 Criar o formulário
             Form formConfirmacao = new Form
             {
-                Text = isKit ? "Confirmação do Kit" : "Confirmação do Produto",
+                //Text = isKit ? "Confirmação do Kit" : "Confirmação do Produto",
                 StartPosition = FormStartPosition.CenterScreen,
-                AutoSize = true,
+                AutoSize = false, // Kelvin você precisa terminar o Frontend em relação aos kits, formulário de kits criado dinâmicamente
+                Size = new Size(460, 590),
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                FormBorderStyle = FormBorderStyle.FixedDialog,
-                BackColor = Color.White
+                FormBorderStyle = FormBorderStyle.None,
+                BackColor = Color.FromArgb(51, 153, 255)
             };
 
             FlowLayoutPanel panel = new FlowLayoutPanel
@@ -384,7 +461,16 @@ namespace ProgramaFull.Formulários
                 AutoSize = true,
                 FlowDirection = FlowDirection.TopDown,
                 Padding = new Padding(10),
-                WrapContents = false
+                WrapContents = false,
+            };
+
+            // Painel principal onde vai ficar tudo (até os outros painéis)
+            Panel painelPrincipal = new Panel
+            {
+                Size = new Size(440, 570),
+                Location = new Point(10, 10),
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle
             };
 
             // 🔹 Adiciona título ao formulário
@@ -392,29 +478,34 @@ namespace ProgramaFull.Formulários
             {
                 Text = isKit ? "Confirme os produtos do kit" : "Confirme o produto bipado",
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
-                AutoSize = true,
-                ForeColor = Color.Black
+                Size = new Size(440, 20),
+                Location = new Point(0, 0),
+                ForeColor = Color.Black,
+                Dock = DockStyle.Top,
+                TextAlign = ContentAlignment.TopCenter
             };
-            panel.Controls.Add(titulo);
 
             // 🔹 Adiciona imagem do produto/kit
             PictureBox pictureBox = new PictureBox
             {
-                Size = new Size(250, 250),
+                Size = new Size(440, 250),
+                Location = new Point(0, 30),
                 SizeMode = PictureBoxSizeMode.Zoom,
-                ImageLocation = imagemUrl
+                ImageLocation = imagemUrl,
             };
-            panel.Controls.Add(pictureBox);
 
             // 🔹 Criar painel para os produtos do kit ou produto simples
             FlowLayoutPanel composicaoPanel = new FlowLayoutPanel
             {
-                AutoSize = true,
+                AutoSize = false,
+                Size = new Size(420, 200),
+                Location = new Point(10, 290),
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
-                BorderStyle = BorderStyle.FixedSingle
+                BorderStyle = BorderStyle.FixedSingle,
+                BackColor = Color.LightGray,
+                AutoScroll = true
             };
-            panel.Controls.Add(composicaoPanel);
 
             Dictionary<string, Label> produtosLabels = new Dictionary<string, Label>();
             Dictionary<string, int> quantidadeBipada = new Dictionary<string, int>();
@@ -430,17 +521,19 @@ namespace ProgramaFull.Formulários
                     //MessageBox.Show("Erro ao buscar a composição do kit. Tente novamente.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     //return;
                     // Se for um produto simples, impedir a execução de código que busca composição
-                    ExibirFormularioProdutoSimples(produtoData.First(), imagemUrl, formKits);
+                    var embalarForm = Application.OpenForms.OfType<EmbalarEtiquetagemBIPE>().FirstOrDefault();
+                    ExibirFormularioProdutoSimples(produtoData.First(), imagemUrl, formKits, embalarForm);
                     return;
                 }
 
-                Label labelComposicao = new Label
-                {
-                    Text = "Composição do Kit:",
-                    Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                    AutoSize = true
-                };
-                composicaoPanel.Controls.Add(labelComposicao);
+                //// Painel Principal onde vai ter todas as coisas e dar uma bordinha maneira
+                //Panel painelPrincipal = new Panel
+                //{
+                //    Size = new Size(422, 410),
+                //    Location = new Point(10, 10),
+                //    BackColor = Color.White,
+                //    BorderStyle = BorderStyle.FixedSingle
+                //};
 
                 foreach (var produto in composicao)
                 {
@@ -449,20 +542,30 @@ namespace ProgramaFull.Formulários
                     Label produtoLabel = new Label
                     {
                         Text = $"{produto.Descricao} - {produto.Quantidade} Unidades",
-                        Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                        Font = new Font("Segoe UI", 10, FontStyle.Bold),
                         ForeColor = Color.Red,
-                        AutoSize = true
+                        AutoSize = true                        
                     };
 
                     produtosLabels[produto.SKU] = produtoLabel;
                     composicaoPanel.Controls.Add(produtoLabel);
                 }
 
+                //Location = new Point(355, 534),
+                //Size = new Size(75, 26),
+                // Botão cancelar infos
+
                 // Botão para atualizar a composição em tempo real
                 Button btnAtualizar = new Button
                 {
-                    Text = "Atualizar Composição",
-                    AutoSize = true
+                    Text = "",
+                    AutoSize = false,
+                    Size = new Size(26, 26),
+                    Location = new Point(324, 534),
+                    BackColor = Color.WhiteSmoke,
+                    BackgroundImage = Resources.btnRefresh,
+                    BackgroundImageLayout = ImageLayout.Zoom,
+                    TabStop = false                
                 };
                 btnAtualizar.Click += async (s, e) =>
                 {
@@ -476,7 +579,7 @@ namespace ProgramaFull.Formulários
                         Label produtoLabel = new Label
                         {
                             Text = $"{produto.Descricao} - {produto.Quantidade} Unidades",
-                            Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                            Font = new Font("Segoe UI", 10, FontStyle.Bold),
                             ForeColor = Color.Red,
                             AutoSize = true
                         };
@@ -485,11 +588,15 @@ namespace ProgramaFull.Formulários
                         composicaoPanel.Controls.Add(produtoLabel);
                     }
                 };
-                panel.Controls.Add(btnAtualizar);
+                painelPrincipal.Controls.Add(btnAtualizar);
             }
 
             // 🔹 Criar TextBox para bipagem
-            TextBox textBoxBipagem = new TextBox { Width = 200 };
+            TextBox textBoxBipagem = new TextBox
+            {
+                Width = 420,
+                Location = new Point(10, 500)
+            };
             textBoxBipagem.KeyDown += (sender, e) =>
             {
                 if (e.KeyCode == Keys.Enter)
@@ -572,31 +679,46 @@ namespace ProgramaFull.Formulários
                 }
             };
 
-            panel.Controls.Add(textBoxBipagem);
 
             // Botão de Cancelar
             Button btnCancelar = new Button
             {
                 Text = "Cancelar",
-                AutoSize = true
+                AutoSize = false,
+                Location = new Point(355, 534),
+                Size = new Size(75, 26),
+                BackColor = Color.WhiteSmoke,
+                TabStop = false
             };
-            btnCancelar.Click += (s, e) => formConfirmacao.Close();
-            panel.Controls.Add(btnCancelar);
+            btnCancelar.Click += (s, e) =>
+            {
+                embalarEtiquetagemBIPE?.Show();
+                formConfirmacao.Close();
+            };
 
+            painelPrincipal.Controls.Add(btnCancelar);
+
+            painelPrincipal.Controls.Add(titulo);
+            painelPrincipal.Controls.Add(pictureBox);
+            painelPrincipal.Controls.Add(composicaoPanel);
+            painelPrincipal.Controls.Add(textBoxBipagem);            
+
+            formConfirmacao.Controls.Add(painelPrincipal);
             formConfirmacao.Controls.Add(panel);
             formConfirmacao.ShowDialog();
         }
 
-        private void ExibirFormularioProdutoSimples(Dictionary<string, object> produto, string imagemUrl, Form formKits)
+        private void ExibirFormularioProdutoSimples(Dictionary<string, object> produto, string imagemUrl, Form formKits, Form embalarEtiquetagemBIPE)
         {
             Form formProdutoSimples = new Form
             {
-                Text = "Confirmação do Produto",
+                //Text = "Confirmação do Produto",
                 StartPosition = FormStartPosition.CenterScreen,
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                FormBorderStyle = FormBorderStyle.FixedDialog,
-                BackColor = Color.White
+                AutoSize = false,
+                Size = new Size(442, 450),
+                // AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                FormBorderStyle = FormBorderStyle.None,
+                BackColor = Color.FromArgb(51, 153, 255)
             };
 
             FlowLayoutPanel panel = new FlowLayoutPanel
@@ -607,38 +729,116 @@ namespace ProgramaFull.Formulários
                 WrapContents = false
             };
 
+            // 🔹 Painel principal, onde vai ser colocado tudo
+            Panel painelPrincipal = new Panel
+            {
+                Size = new Size(422, 410),
+                Location = new Point(10, 10),
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+
+            // 🔹 Painel para colocar o botão lá embaixo
+            Panel painelBtnCancel = new Panel
+            {
+                AutoSize = false,
+                Size = new Size(75, 30),
+                Location = new Point(357, 420),
+                BackColor = Color.FromArgb(51, 153, 255)
+            };
+
+            Panel panelInfoProduto = new Panel
+            {
+                AutoSize = false,
+                Size = new Size(400, 50),
+                Margin = new Padding(0)
+            };
+
             // 🔹 Adicionar título
             Label titulo = new Label
             {
                 Text = "Confirme o produto bipado:",
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
-                AutoSize = true,
+                AutoSize = false,
+                Size = new Size(250, 25),
+                Dock = DockStyle.Top,
+                TextAlign = ContentAlignment.TopCenter,
                 ForeColor = Color.Black
             };
-            panel.Controls.Add(titulo);
 
             // 🔹 Adicionar imagem do produto
             PictureBox pictureBox = new PictureBox
             {
                 Size = new Size(250, 250),
                 SizeMode = PictureBoxSizeMode.Zoom,
-                ImageLocation = imagemUrl
-            };
-            panel.Controls.Add(pictureBox);
+                ImageLocation = imagemUrl,
+                Dock = DockStyle.Top
+            };            
 
             // 🔹 Exibir informações do produto
-            Label produtoInfo = new Label
+            // Nome do Anúncio
+            Label produtoInfoAnuncio = new Label
             {
-                Text = $"Anúncio: {produto["Anuncio"]}\nEtiqueta: {produto["Etiqueta"]}\nQtd Etiquetas: {produto["Qtd Etiquetas"]}",
+                Text = $"Anúncio: ",
+                Font = new Font("Segoe UI Semibold", 10, FontStyle.Regular),
+                ForeColor = Color.Black,
+                AutoSize = false,
+                Size = new Size(64, 25)
+            };
+            Label produtoAnuncio = new Label 
+            {
+                Text = $"{produto["Anuncio"]}",
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
                 ForeColor = Color.Black,
-                AutoSize = true
+                AutoSize = true,
+                Location = new Point(produtoInfoAnuncio.Width - 4, 0)
             };
-            panel.Controls.Add(produtoInfo);
 
+            // Código da Etiqueta
+            Label produtoInfoEtiqueta = new Label
+            {
+                Text = $"Etiqueta: ",
+                Font = new Font("Segoe UI Semibold", 10, FontStyle.Regular),
+                ForeColor = Color.Black,
+                AutoSize = false,
+                Size = new Size(63, 20),
+                Location = new Point(0, produtoInfoAnuncio.Height) 
+            };
+            Label produtoEtiqueta = new Label
+            {
+                Text = $"{produto["Etiqueta"]}",
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = Color.Black,
+                AutoSize = true,
+                Location = new Point(produtoInfoEtiqueta.Width - 4, produtoInfoAnuncio.Height)
+            };
+
+            // Quantidade Etiqueta
+            Label produtoInfoQtdEtiquetas = new Label
+            {
+                Text = $"Qtd Etiquetas: ",
+                Font = new Font("Segoe UI Semibold", 10, FontStyle.Regular),
+                ForeColor = Color.Black,
+                AutoSize = false,
+                Size = new Size(100, 25),
+                Location = new Point(produtoInfoEtiqueta.Width + 190, produtoInfoAnuncio.Height)
+            };
+            
+            Label produtoQtdEtiquetas = new Label
+            {
+                Text = $"{produto["Qtd Etiquetas"]}",
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = Color.Black,
+                AutoSize = true,
+                Location = new Point(produtoInfoQtdEtiquetas.Width + 248, produtoInfoAnuncio.Height)
+            };
+            
             // 🔹 Criar TextBox para bipagem do produto
-            TextBox textBoxBipagem = new TextBox { Width = 200 };
-            panel.Controls.Add(textBoxBipagem);
+            TextBox textBoxBipagem = new TextBox 
+            { 
+                Width = 400 ,
+                Dock = DockStyle.Bottom
+            };
 
             textBoxBipagem.KeyDown += async (sender, e) =>
             {
@@ -697,42 +897,36 @@ namespace ProgramaFull.Formulários
             Button btnCancelar = new Button
             {
                 Text = "Cancelar",
-                AutoSize = true
+                AutoSize = false,
+                //Dock = DockStyle.Right,
+                //TextAlign = ContentAlignment.MiddleCenter,                
+                Size = new Size(75, 26),
+                BackColor = Color.WhiteSmoke,
+                TabStop = false,
+                Cursor = Cursors.Hand
             };
-            btnCancelar.Click += (s, e) => formProdutoSimples.Close();
-            panel.Controls.Add(btnCancelar);
-
-            formProdutoSimples.Controls.Add(panel);
-            formProdutoSimples.ShowDialog();
-        }
-
-        private void ImprimirEtiquetas(Etiqueta etiqueta, Produto produto)
-        {
-            if (string.IsNullOrEmpty(Program.impressoraEtiqueta))
+            btnCancelar.Click += (s, e) =>
             {
-                MessageBox.Show("Nenhuma impressora de etiquetas selecionada.\nConfigure a impressora antes de prosseguir.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
+                embalarEtiquetagemBIPE.Show(); // Provisório
+                formProdutoSimples.Close();
+            };
+            
 
-            try
-            {
-                string caminhoJson = $@"P:\INFORMATICA\programas\FULL\KelvinV2\agendamentos\{Program.nomePasta}\Etiquetas";
-                string fileContent = GerarEtiquetas(etiqueta, produto, caminhoJson);
-                string printerName = Program.impressoraEtiqueta;
-                if (MessageBox.Show($"Impressora selecionada para a impressão da etiqueta: {printerName}\n\n Deseja prosseguir?", "Impressora Etiqueta", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
-                {
-                    if (!EnviarArquivoParaImpressora(fileContent))
-                    {
-                        throw new Exception("Erro ao enviar o arquivo ZPL para a impressora.");
-                    }
-                }
-
-                MessageBox.Show("Etiquetas enviadas para impressão com sucesso!", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Erro ao imprimir etiquetas: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            panel.Controls.Add(titulo);
+            panel.Controls.Add(pictureBox);
+            panel.Controls.Add(panelInfoProduto);
+            panel.Controls.Add(textBoxBipagem);
+            panelInfoProduto.Controls.Add(produtoAnuncio);
+            panelInfoProduto.Controls.Add(produtoInfoAnuncio);
+            panelInfoProduto.Controls.Add(produtoInfoEtiqueta);
+            panelInfoProduto.Controls.Add(produtoEtiqueta);
+            panelInfoProduto.Controls.Add(produtoInfoQtdEtiquetas);
+            panelInfoProduto.Controls.Add(produtoQtdEtiquetas);
+            painelPrincipal.Controls.Add(panel);
+            painelBtnCancel.Controls.Add(btnCancelar);
+            formProdutoSimples.Controls.Add(painelBtnCancel);
+            formProdutoSimples.Controls.Add(painelPrincipal);            
+            formProdutoSimples.Show();
         }
 
         private string GerarEtiquetas(Etiqueta etiqueta, Produto produto, string caminhoJson)
@@ -1022,10 +1216,6 @@ namespace ProgramaFull.Formulários
 
         private void VerificarEImprimirEtiquetas(string etiqueta)
         {
-            // string caminhoArquivoEtiquetas = $@"P:\INFORMATICA\programas\FULL\KelvinV2\agendamentos\{Program.nomePasta}\{etiqueta}_Etiquetas.txt";
-
-            // if (File.Exists(caminhoArquivoEtiquetas))
-            //  {
             DialogResult resultado = MessageBox.Show(
                 "As etiquetas já foram impressas anteriormente. Deseja reimprimir?",
                 "Reimpressão",
@@ -1178,7 +1368,7 @@ namespace ProgramaFull.Formulários
             formSelecao.Controls.Add(radioPersonalizado);
             formSelecao.Controls.Add(txtQuantidade);
             formSelecao.Controls.Add(btnImprimir);
-            formSelecao.ShowDialog();
+            formSelecao.Show();
         }
 
         public static async Task<string> BuscarImagemProdutoTiny(string idProduto)

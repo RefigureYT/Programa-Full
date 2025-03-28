@@ -63,6 +63,26 @@ namespace ProgramaFull.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap botaoAtualizarIcone {
+            get {
+                object obj = ResourceManager.GetObject("botaoAtualizarIcone", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap btnRefresh {
+            get {
+                object obj = ResourceManager.GetObject("btnRefresh", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap conf {
             get {
                 object obj = ResourceManager.GetObject("conf", resourceCulture);
@@ -136,26 +156,6 @@ namespace ProgramaFull.Properties {
         internal static System.Drawing.Bitmap Pasta {
             get {
                 object obj = ResourceManager.GetObject("Pasta", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Refresh {
-            get {
-                object obj = ResourceManager.GetObject("Refresh", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Refresh1 {
-            get {
-                object obj = ResourceManager.GetObject("Refresh1", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

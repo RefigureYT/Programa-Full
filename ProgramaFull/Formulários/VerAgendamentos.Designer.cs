@@ -260,7 +260,7 @@
             // 
             refreshButton.Anchor = AnchorStyles.Left;
             refreshButton.AutoSize = true;
-            refreshButton.BackgroundImage = Properties.Resources.Refresh1;
+            refreshButton.BackgroundImage = Properties.Resources.btnRefresh;
             refreshButton.BackgroundImageLayout = ImageLayout.Zoom;
             refreshButton.Location = new Point(222, 421);
             refreshButton.Name = "refreshButton";

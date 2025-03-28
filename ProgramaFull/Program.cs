@@ -23,7 +23,7 @@ namespace ProgramaFull
 
 
         public static string typeVersion = "alpha";
-        public static string version = "1.0.4";
+        public static string version = "1.0.5";
         // Versões:
         // alpha  = versão inicial, instável, para testes internos (Com muitos bugs)
         // beta   = mais estável, com funcionalidades completas, ainda em testes (Com menos bugs)

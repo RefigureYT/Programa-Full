@@ -51,6 +51,7 @@
             btnVoltar.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnVoltar.BackgroundImage = Properties.Resources.setaVoltando;
             btnVoltar.BackgroundImageLayout = ImageLayout.Zoom;
+            btnVoltar.Cursor = Cursors.Hand;
             btnVoltar.Location = new Point(438, 5);
             btnVoltar.Name = "btnVoltar";
             btnVoltar.Size = new Size(25, 25);
@@ -63,6 +64,7 @@
             // 
             btnQuit.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnQuit.BackColor = Color.FromArgb(192, 0, 0);
+            btnQuit.Cursor = Cursors.Hand;
             btnQuit.Font = new Font("Gadugi", 12F, FontStyle.Bold);
             btnQuit.ForeColor = SystemColors.ControlLightLight;
             btnQuit.ImageAlign = ContentAlignment.MiddleLeft;
@@ -151,10 +153,10 @@
             // labelTutorial
             // 
             labelTutorial.AutoSize = true;
-            labelTutorial.Font = new Font("Segoe UI", 11.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            labelTutorial.Font = new Font("Microsoft Sans Serif", 11.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
             labelTutorial.Location = new Point(154, 138);
             labelTutorial.Name = "labelTutorial";
-            labelTutorial.Size = new Size(178, 20);
+            labelTutorial.Size = new Size(186, 18);
             labelTutorial.TabIndex = 77;
             labelTutorial.Text = "Bipe o primeiro produto";
             // 
@@ -179,6 +181,7 @@
             // 
             // finalizarBtn
             // 
+            finalizarBtn.Cursor = Cursors.Hand;
             finalizarBtn.Location = new Point(409, 132);
             finalizarBtn.Name = "finalizarBtn";
             finalizarBtn.Size = new Size(75, 23);

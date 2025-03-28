@@ -181,7 +181,35 @@ namespace ProgramaFull.Formulários
 
         private void CarregarProdutosDoJSON(string jsonContent)
         {
-            produtos = JsonSerializer.Deserialize<List<ProdutosJson>>(jsonContent);
+            try
+            {
+                produtos = JsonSerializer.Deserialize<List<ProdutosJson>>(jsonContent);
+            }
+            catch (JsonException ex)
+            {
+                // Verifica se o erro está relacionado à conversão da Quantidade
+                if (ex.Message.Contains(".Quantidade", StringComparison.OrdinalIgnoreCase))
+                {
+                    MessageBox.Show(
+                        "Quantidade não suportada (Código de barras em quantidade, erro no bot).\n\nContatar o Administrador!",
+                        "Erro de Dados",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error
+                    );
+                }
+                else
+                {
+                    MessageBox.Show(
+                        $"Erro ao processar o arquivo JSON:\n{ex.Message}",
+                        "Erro",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error
+                    );
+                }
+
+                return; // Interrompe a execução do método
+            }
+
             int yOffset = 10;
             tempoSegundos = 0;
             foreach (var produto in produtos)
